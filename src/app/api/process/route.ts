@@ -807,56 +807,6 @@ export async function POST(request: NextRequest) {
     // True monochrome only if: 1 color AND no auto-detect AND no background removal
     const isMonochrome = colorCount === 1 && !autoDetectColors && !shouldRemoveBackground
     let detectedColors: string[] = []
-    
-    // Extract colors from original image if:
-    // - auto-detect is enabled, OR
-    // - background removal is requested (need to know foreground color), OR
-    // - multi-color mode with default colors
-    const shouldExtractColors = autoDetectColors || 
-      shouldRemoveBackground || 
-      (!isMonochrome && (customColors[0] === "currentColor" || customColors.length === 0))
-    
-    if (shouldExtractColors) {
-      console.log("[API] Auto-detecting colors from image...")
-      // Extract at least 2 colors to separate foreground from background
-      const colorsToExtract = Math.max(colorCount, shouldRemoveBackground ? 2 : colorCount)
-      // Sample from center when removing background to avoid edge background pixels
-      detectedColors = await extractDominantColors(buffer, colorsToExtract, shouldRemoveBackground)
-      
-      // If removing background with 1 color, identify the foreground color
-      if (shouldRemoveBackground && colorCount === 1 && detectedColors.length > 1) {
-        // Sort by brightness (brightest first)
-        const sorted = [...detectedColors].sort((a, b) => getColorBrightness(b) - getColorBrightness(a))
-        
-        const brightestColor = sorted[0]
-        const darkestColor = sorted[sorted.length - 1]
-        const brightestBrightness = getColorBrightness(brightestColor)
-        const darkestBrightness = getColorBrightness(darkestColor)
-        
-        console.log(`[API] Brightest color: ${brightestColor} (brightness: ${brightestBrightness})`)
-        console.log(`[API] Darkest color: ${darkestColor} (brightness: ${darkestBrightness})`)
-        
-        // Determine which is background based on brightness extremes
-        // Very dark (< 50) = dark background, use brightest as foreground
-        // Very bright (> 200) = light background, use darkest as foreground
-        // Otherwise, use the one that's NOT at an extreme
-        if (darkestBrightness < 50) {
-          // Dark background detected - use the brighter color as foreground
-          customColors = [brightestColor]
-          console.log(`[API] Dark background detected, using bright foreground: ${brightestColor}`)
-        } else if (brightestBrightness > 200) {
-          // Light background detected - use the darker color as foreground
-          customColors = [darkestColor]
-          console.log(`[API] Light background detected, using dark foreground: ${darkestColor}`)
-        } else {
-          // Medium tones - use the more saturated/colorful one
-          customColors = [brightestColor]
-          console.log(`[API] Medium tones, using: ${brightestColor}`)
-        }
-      } else if (detectedColors.length > 0) {
-        customColors = detectedColors.slice(0, colorCount)
-      }
-    }
 
     // Step 1: Handle different file types
     if (fileType === "image/svg+xml" || fileName.toLowerCase().endsWith(".svg")) {
@@ -869,10 +819,27 @@ export async function POST(request: NextRequest) {
     ) {
       console.log("[API] Processing as raster image...")
 
-      // Step 2: Background removal (if requested)
+      // Step 2: Background removal (if requested) - DO THIS FIRST!
       if (shouldRemoveBackground) {
         console.log("[API] Attempting background removal...")
         buffer = await removeBackgroundFromImage(buffer)
+      }
+      
+      // Step 2b: Extract colors AFTER background removal for accurate colors
+      // Extract colors if:
+      // - auto-detect is enabled, OR
+      // - multi-color mode with default colors
+      const shouldExtractColors = autoDetectColors || 
+        (!isMonochrome && (customColors[0] === "currentColor" || customColors.length === 0))
+      
+      if (shouldExtractColors) {
+        console.log("[API] Auto-detecting colors from image (after bg removal)...")
+        // No need to sample from center anymore since background is already removed
+        detectedColors = await extractDominantColors(buffer, colorCount, false)
+        
+        if (detectedColors.length > 0) {
+          customColors = detectedColors.slice(0, colorCount)
+        }
       }
 
       // Step 3: Resize and convert to PNG with sharp
