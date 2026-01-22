@@ -328,7 +328,8 @@ function getColorBrightness(color: string): number {
  * - Sets float precision to 1
  */
 function optimizeSvg(svgString: string, useCurrentColor: boolean = true): string {
-  const plugins: Parameters<typeof optimize>[1]["plugins"] = [
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const plugins: any[] = [
     {
       name: "preset-default",
       params: {
