@@ -359,6 +359,29 @@ async function posterizeToSvg(buffer: Buffer, colorCount: number): Promise<strin
 }
 
 /**
+ * Removes the background path from SVG (usually the first/largest path)
+ * This is used when background removal is enabled
+ */
+function removeBackgroundPath(svgString: string): string {
+  console.log("[API] Removing background path from SVG...")
+  
+  // The first path in posterized SVG is typically the background
+  // We remove it to get only the foreground elements
+  let pathCount = 0
+  const result = svgString.replace(/<path\s+[^>]*?(?:\/?>|>[\s\S]*?<\/path>)/gi, (match) => {
+    pathCount++
+    if (pathCount === 1) {
+      console.log("[API] Removed first path (background)")
+      return '' // Remove the first path (background)
+    }
+    return match
+  })
+  
+  console.log(`[API] Kept ${pathCount - 1} foreground paths`)
+  return result
+}
+
+/**
  * Replaces colors in SVG with custom brand colors
  * Assigns colors to paths/shapes based on their order
  */
@@ -435,7 +458,7 @@ function getColorBrightness(color: string): number {
  * - Removes width/height attributes
  * - Sets float precision to 1
  */
-function optimizeSvg(svgString: string, useCurrentColor: boolean = true): string {
+function optimizeSvg(svgString: string, useCurrentColor: boolean = true, removeFillOpacity: boolean = false): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const plugins: any[] = [
     {
@@ -447,11 +470,13 @@ function optimizeSvg(svgString: string, useCurrentColor: boolean = true): string
         },
       },
     },
-    // Remove width and height attributes
+    // Remove width and height attributes (and optionally fill-opacity)
     {
       name: "removeAttrs",
       params: {
-        attrs: ["width", "height"],
+        attrs: removeFillOpacity 
+          ? ["width", "height", "fill-opacity", "fillOpacity"] 
+          : ["width", "height"],
       },
     },
     // Add/update viewBox to 24x24
@@ -787,7 +812,14 @@ export async function POST(request: NextRequest) {
     // Step 5: Optimize SVG (use currentColor only for true monochrome - no auto-detect)
     console.log("[API] Optimizing SVG...")
     const useCurrentColor = colorCount === 1 && !autoDetectColors
-    let optimizedSvg = optimizeSvg(svgString, useCurrentColor)
+    // Remove fill-opacity for multi-color to get solid colors instead of semi-transparent layers
+    const removeFillOpacity = colorCount > 1
+    let optimizedSvg = optimizeSvg(svgString, useCurrentColor, removeFillOpacity)
+    
+    // Step 5a: Remove background path if background removal was requested
+    if (shouldRemoveBackground && colorCount > 1) {
+      optimizedSvg = removeBackgroundPath(optimizedSvg)
+    }
     
     // Step 5b: Apply custom/detected colors (if not using currentColor)
     if (!useCurrentColor && customColors.length > 0 && customColors[0] !== "currentColor") {
