@@ -337,8 +337,6 @@ async function traceToSvg(buffer: Buffer): Promise<string> {
         background: "transparent",
         turdSize: 4,           // Remove small noise (increased from 2)
         optTolerance: 0.1,     // More accurate curves (decreased from 0.2)
-        alphaMax: 1.0,         // Smoother corners
-        turnPolicy: "minority", // Better corner handling
       }
 
       potrace.trace(buffer, params, (err: Error | null, svg: string) => {
@@ -369,8 +367,6 @@ async function posterizeToSvg(buffer: Buffer, colorCount: number): Promise<strin
         background: "transparent",
         turdSize: 4,           // Remove small noise (increased from 2)
         optTolerance: 0.1,     // More accurate curves (decreased from 0.2)
-        alphaMax: 1.0,         // Smoother corners
-        turnPolicy: "minority", // Better corner handling
       }
 
       potrace.posterize(buffer, params, (err: Error | null, svg: string) => {
