@@ -160,7 +160,7 @@ async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBu
   if (!apiKey) {
     // No API key - pass through unchanged
     console.log("No REMOVE_BG_API_KEY found, skipping background removal")
-    return buffer
+    return buffer as Buffer<ArrayBuffer>
   }
 
   try {
