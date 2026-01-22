@@ -154,7 +154,7 @@ function colorDistance(
  * If REMOVE_BG_API_KEY is set, calls the remove.bg API.
  * Otherwise, passes the buffer through unchanged.
  */
-async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer> {
+async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBuffer>> {
   const apiKey = process.env.REMOVE_BG_API_KEY
 
   if (!apiKey) {
@@ -182,12 +182,12 @@ async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer> {
       throw new Error(`Background removal failed: ${response.status}`)
     }
 
-    const resultBuffer = Buffer.from(await response.arrayBuffer())
-    return resultBuffer
+    const arrayBuffer = await response.arrayBuffer()
+    return Buffer.from(arrayBuffer) as Buffer<ArrayBuffer>
   } catch (error) {
     console.error("Background removal error:", error)
     // On error, return original buffer
-    return buffer
+    return buffer as Buffer<ArrayBuffer>
   }
 }
 
