@@ -72,7 +72,7 @@ async function extractDominantColors(buffer: Buffer, colorCount: number, sampleF
     const clusters = kMeansClustering(pixels, colorCount)
     
     // Convert cluster centers to hex
-    let colors = clusters.map(c => {
+    const colors = clusters.map(c => {
       const r = Math.round(c.r)
       const g = Math.round(c.g)
       const b = Math.round(c.b)
