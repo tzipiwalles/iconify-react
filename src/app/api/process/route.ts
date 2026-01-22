@@ -165,7 +165,7 @@ async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer> {
 
   try {
     const formData = new FormData()
-    formData.append("image_file", new Blob([buffer]), "image.png")
+    formData.append("image_file", new Blob([new Uint8Array(buffer)]), "image.png")
     formData.append("size", "auto")
 
     const response = await fetch("https://api.remove.bg/v1.0/removebg", {
