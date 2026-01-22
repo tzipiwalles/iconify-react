@@ -792,14 +792,36 @@ export async function POST(request: NextRequest) {
       const colorsToExtract = Math.max(colorCount, shouldRemoveBackground ? 2 : colorCount)
       detectedColors = await extractDominantColors(buffer, colorsToExtract)
       
-      // If removing background with 1 color, use the brightest non-white color (likely foreground)
+      // If removing background with 1 color, identify the foreground color
       if (shouldRemoveBackground && colorCount === 1 && detectedColors.length > 1) {
-        // Sort by brightness and pick the non-background color
+        // Sort by brightness (brightest first)
         const sorted = [...detectedColors].sort((a, b) => getColorBrightness(b) - getColorBrightness(a))
-        // The foreground is usually the brighter one (text on dark bg) or darker one (text on light bg)
-        // Use the second color as it's likely the foreground after removing the dominant background
-        customColors = [sorted.length > 1 ? sorted[1] : sorted[0]]
-        console.log(`[API] Selected foreground color: ${customColors[0]}`)
+        
+        const brightestColor = sorted[0]
+        const darkestColor = sorted[sorted.length - 1]
+        const brightestBrightness = getColorBrightness(brightestColor)
+        const darkestBrightness = getColorBrightness(darkestColor)
+        
+        console.log(`[API] Brightest color: ${brightestColor} (brightness: ${brightestBrightness})`)
+        console.log(`[API] Darkest color: ${darkestColor} (brightness: ${darkestBrightness})`)
+        
+        // Determine which is background based on brightness extremes
+        // Very dark (< 50) = dark background, use brightest as foreground
+        // Very bright (> 200) = light background, use darkest as foreground
+        // Otherwise, use the one that's NOT at an extreme
+        if (darkestBrightness < 50) {
+          // Dark background detected - use the brighter color as foreground
+          customColors = [brightestColor]
+          console.log(`[API] Dark background detected, using bright foreground: ${brightestColor}`)
+        } else if (brightestBrightness > 200) {
+          // Light background detected - use the darker color as foreground
+          customColors = [darkestColor]
+          console.log(`[API] Light background detected, using dark foreground: ${darkestColor}`)
+        } else {
+          // Medium tones - use the more saturated/colorful one
+          customColors = [brightestColor]
+          console.log(`[API] Medium tones, using: ${brightestColor}`)
+        }
       } else if (detectedColors.length > 0) {
         customColors = detectedColors.slice(0, colorCount)
       }
