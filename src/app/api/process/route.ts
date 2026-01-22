@@ -19,8 +19,9 @@ interface PotraceParams {
 /**
  * Extracts dominant colors from an image using sharp
  * Returns array of hex colors sorted by dominance (most dominant first)
+ * skipDarkColors: when true, filters out near-black colors (for dark background removal)
  */
-async function extractDominantColors(buffer: Buffer, colorCount: number): Promise<string[]> {
+async function extractDominantColors(buffer: Buffer, colorCount: number, skipDarkColors: boolean = false): Promise<string[]> {
   try {
     // Resize to small size for faster color analysis
     const { data, info } = await sharp(buffer)
@@ -39,28 +40,43 @@ async function extractDominantColors(buffer: Buffer, colorCount: number): Promis
       // Skip very transparent pixels if RGBA
       if (info.channels === 4 && data[i + 3] < 128) continue
       
-      // Skip near-white pixels (likely background)
+      // Skip near-white pixels (likely light background)
       if (r > 240 && g > 240 && b > 240) continue
+      
+      // Skip near-black pixels if requested (likely dark background)
+      if (skipDarkColors && r < 40 && g < 40 && b < 40) continue
       
       pixels.push({ r, g, b })
     }
     
     if (pixels.length === 0) {
+      // Return colorful defaults instead of black/gray
       return colorCount === 1 
-        ? ['#000000'] 
-        : ['#1F2937', '#4B5563', '#9CA3AF', '#D1D5DB', '#F3F4F6'].slice(0, colorCount)
+        ? ['#3B82F6']  // Blue
+        : ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B'].slice(0, colorCount)
     }
     
     // Use k-means-like clustering to find dominant colors
     const clusters = kMeansClustering(pixels, colorCount)
     
     // Convert cluster centers to hex
-    const colors = clusters.map(c => {
+    let colors = clusters.map(c => {
       const r = Math.round(c.r)
       const g = Math.round(c.g)
       const b = Math.round(c.b)
       return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase()
     })
+    
+    // Filter out very dark colors if skipDarkColors is enabled
+    if (skipDarkColors) {
+      colors = colors.filter(color => getColorBrightness(color) > 30)
+      // If all colors were filtered out, return colorful defaults
+      if (colors.length === 0) {
+        return colorCount === 1 
+          ? ['#3B82F6']
+          : ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B'].slice(0, colorCount)
+      }
+    }
     
     // Sort by brightness (darkest first) for consistent layering
     colors.sort((a, b) => {
@@ -73,10 +89,10 @@ async function extractDominantColors(buffer: Buffer, colorCount: number): Promis
     return colors
   } catch (error) {
     console.error('[API] Color extraction failed:', error)
-    // Return default grayscale colors
+    // Return colorful defaults instead of grayscale
     return colorCount === 1 
-      ? ['#000000'] 
-      : ['#1F2937', '#4B5563', '#9CA3AF', '#D1D5DB', '#F3F4F6'].slice(0, colorCount)
+      ? ['#3B82F6'] 
+      : ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B'].slice(0, colorCount)
   }
 }
 
@@ -796,7 +812,8 @@ export async function POST(request: NextRequest) {
       console.log("[API] Auto-detecting colors from image...")
       // Extract at least 2 colors to separate foreground from background
       const colorsToExtract = Math.max(colorCount, shouldRemoveBackground ? 2 : colorCount)
-      detectedColors = await extractDominantColors(buffer, colorsToExtract)
+      // Skip dark colors when removing background (they're likely the dark background)
+      detectedColors = await extractDominantColors(buffer, colorsToExtract, shouldRemoveBackground)
       
       // If removing background with 1 color, identify the foreground color
       if (shouldRemoveBackground && colorCount === 1 && detectedColors.length > 1) {
