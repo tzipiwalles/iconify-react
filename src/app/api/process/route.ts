@@ -774,15 +774,34 @@ export async function POST(request: NextRequest) {
     console.log(`[API] File buffer size: ${buffer.length} bytes`)
 
     let svgString: string
-    const isMonochrome = colorCount === 1 && !autoDetectColors // True monochrome only if not auto-detecting
+    // True monochrome only if: 1 color AND no auto-detect AND no background removal
+    const isMonochrome = colorCount === 1 && !autoDetectColors && !shouldRemoveBackground
     let detectedColors: string[] = []
     
-    // Extract colors from original image if auto-detect is enabled
-    if (autoDetectColors || (!isMonochrome && (customColors[0] === "currentColor" || customColors.length === 0))) {
+    // Extract colors from original image if:
+    // - auto-detect is enabled, OR
+    // - background removal is requested (need to know foreground color), OR
+    // - multi-color mode with default colors
+    const shouldExtractColors = autoDetectColors || 
+      shouldRemoveBackground || 
+      (!isMonochrome && (customColors[0] === "currentColor" || customColors.length === 0))
+    
+    if (shouldExtractColors) {
       console.log("[API] Auto-detecting colors from image...")
-      detectedColors = await extractDominantColors(buffer, colorCount)
-      if (detectedColors.length > 0) {
-        customColors = detectedColors
+      // Extract at least 2 colors to separate foreground from background
+      const colorsToExtract = Math.max(colorCount, shouldRemoveBackground ? 2 : colorCount)
+      detectedColors = await extractDominantColors(buffer, colorsToExtract)
+      
+      // If removing background with 1 color, use the brightest non-white color (likely foreground)
+      if (shouldRemoveBackground && colorCount === 1 && detectedColors.length > 1) {
+        // Sort by brightness and pick the non-background color
+        const sorted = [...detectedColors].sort((a, b) => getColorBrightness(b) - getColorBrightness(a))
+        // The foreground is usually the brighter one (text on dark bg) or darker one (text on light bg)
+        // Use the second color as it's likely the foreground after removing the dominant background
+        customColors = [sorted.length > 1 ? sorted[1] : sorted[0]]
+        console.log(`[API] Selected foreground color: ${customColors[0]}`)
+      } else if (detectedColors.length > 0) {
+        customColors = detectedColors.slice(0, colorCount)
       }
     }
 
@@ -843,15 +862,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 5: Optimize SVG (use currentColor only for true monochrome - no auto-detect)
+    // Step 5: Optimize SVG
     console.log("[API] Optimizing SVG...")
-    const useCurrentColor = colorCount === 1 && !autoDetectColors
-    // Remove fill-opacity for multi-color to get solid colors instead of semi-transparent layers
-    const removeFillOpacity = colorCount > 1
+    // Use currentColor only when: 1 color AND no auto-detect AND no background removal
+    const useCurrentColor = colorCount === 1 && !autoDetectColors && !shouldRemoveBackground
+    // Remove fill-opacity to get solid colors
+    const removeFillOpacity = colorCount > 1 || (colorCount === 1 && shouldRemoveBackground)
     let optimizedSvg = optimizeSvg(svgString, useCurrentColor, removeFillOpacity)
     
     // Step 5a: Remove background path if background removal was requested
-    if (shouldRemoveBackground && colorCount > 1) {
+    if (shouldRemoveBackground) {
       optimizedSvg = removeBackgroundPath(optimizedSvg)
     }
     
