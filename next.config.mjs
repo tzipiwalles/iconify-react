@@ -1,10 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // External packages for server-side
-  serverExternalPackages: ['sharp', 'potrace'],
-  
-  // Output standalone for better Vercel compatibility
-  output: 'standalone',
+  experimental: {
+    serverComponentsExternalPackages: ['sharp', 'potrace'],
+  },
   
   // Disable image optimization 
   images: {
