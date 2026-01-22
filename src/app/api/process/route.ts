@@ -150,43 +150,151 @@ function colorDistance(
 }
 
 /**
- * Placeholder function for background removal.
- * If REMOVE_BG_API_KEY is set, calls the remove.bg API.
- * Otherwise, passes the buffer through unchanged.
+ * Detects the dominant background color by sampling corner pixels
+ */
+async function detectBackgroundColor(buffer: Buffer): Promise<{ r: number; g: number; b: number }> {
+  const { data, info } = await sharp(buffer)
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const { width, height, channels } = info
+  const samplePositions = [
+    [0, 0], // top-left
+    [width - 1, 0], // top-right
+    [0, height - 1], // bottom-left
+    [width - 1, height - 1], // bottom-right
+    [Math.floor(width / 2), 0], // top-center
+    [Math.floor(width / 2), height - 1], // bottom-center
+  ]
+
+  const colors: { r: number; g: number; b: number }[] = []
+  
+  for (const [x, y] of samplePositions) {
+    const idx = (y * width + x) * channels
+    colors.push({
+      r: data[idx],
+      g: data[idx + 1],
+      b: data[idx + 2],
+    })
+  }
+
+  // Find most common color (simple mode)
+  const colorCounts = new Map<string, { color: { r: number; g: number; b: number }; count: number }>()
+  
+  for (const color of colors) {
+    // Round to reduce variations
+    const key = `${Math.round(color.r / 10) * 10},${Math.round(color.g / 10) * 10},${Math.round(color.b / 10) * 10}`
+    const existing = colorCounts.get(key)
+    if (existing) {
+      existing.count++
+    } else {
+      colorCounts.set(key, { color, count: 1 })
+    }
+  }
+
+  let maxCount = 0
+  let bgColor = { r: 255, g: 255, b: 255 } // default white
+  
+  for (const { color, count } of colorCounts.values()) {
+    if (count > maxCount) {
+      maxCount = count
+      bgColor = color
+    }
+  }
+
+  console.log(`[API] Detected background color: rgb(${bgColor.r}, ${bgColor.g}, ${bgColor.b})`)
+  return bgColor
+}
+
+/**
+ * Removes background by making similar colors transparent.
+ * If REMOVE_BG_API_KEY is set, calls the remove.bg API instead.
  */
 async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBuffer>> {
   const apiKey = process.env.REMOVE_BG_API_KEY
 
-  if (!apiKey) {
-    // No API key - pass through unchanged
-    console.log("No REMOVE_BG_API_KEY found, skipping background removal")
-    return buffer as Buffer<ArrayBuffer>
+  // If API key is available, use remove.bg for better results
+  if (apiKey) {
+    try {
+      console.log("[API] Using remove.bg API for background removal...")
+      const formData = new FormData()
+      formData.append("image_file", new Blob([new Uint8Array(buffer)]), "image.png")
+      formData.append("size", "auto")
+
+      const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+        method: "POST",
+        headers: {
+          "X-Api-Key": apiKey,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        console.error("remove.bg API error:", error)
+        throw new Error(`Background removal failed: ${response.status}`)
+      }
+
+      const arrayBuffer = await response.arrayBuffer()
+      return Buffer.from(arrayBuffer) as Buffer<ArrayBuffer>
+    } catch (error) {
+      console.error("remove.bg API error, falling back to local removal:", error)
+    }
   }
 
+  // Local background removal using sharp
+  console.log("[API] Using local background removal...")
+  
   try {
-    const formData = new FormData()
-    formData.append("image_file", new Blob([new Uint8Array(buffer)]), "image.png")
-    formData.append("size", "auto")
+    // Detect background color from corners
+    const bgColor = await detectBackgroundColor(buffer)
+    
+    // Tolerance for color matching (0-255)
+    const tolerance = 30
+    
+    // Get raw pixel data
+    const { data, info } = await sharp(buffer)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
 
-    const response = await fetch("https://api.remove.bg/v1.0/removebg", {
-      method: "POST",
-      headers: {
-        "X-Api-Key": apiKey,
-      },
-      body: formData,
-    })
-
-    if (!response.ok) {
-      const error = await response.text()
-      console.error("remove.bg API error:", error)
-      throw new Error(`Background removal failed: ${response.status}`)
+    const { width, height } = info
+    const channels = 4 // RGBA after ensureAlpha
+    
+    // Create new buffer with transparency
+    const newData = Buffer.from(data)
+    
+    for (let i = 0; i < data.length; i += channels) {
+      const r = data[i]
+      const g = data[i + 1]
+      const b = data[i + 2]
+      
+      // Check if pixel is similar to background color
+      const diffR = Math.abs(r - bgColor.r)
+      const diffG = Math.abs(g - bgColor.g)
+      const diffB = Math.abs(b - bgColor.b)
+      
+      if (diffR <= tolerance && diffG <= tolerance && diffB <= tolerance) {
+        // Make transparent
+        newData[i + 3] = 0
+      }
     }
 
-    const arrayBuffer = await response.arrayBuffer()
-    return Buffer.from(arrayBuffer) as Buffer<ArrayBuffer>
+    // Convert back to PNG
+    const result = await sharp(newData, {
+      raw: {
+        width,
+        height,
+        channels: 4,
+      },
+    })
+      .png()
+      .toBuffer()
+
+    console.log("[API] Local background removal complete")
+    return result as Buffer<ArrayBuffer>
   } catch (error) {
-    console.error("Background removal error:", error)
-    // On error, return original buffer
+    console.error("Local background removal error:", error)
     return buffer as Buffer<ArrayBuffer>
   }
 }
