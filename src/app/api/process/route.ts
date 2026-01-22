@@ -19,9 +19,9 @@ interface PotraceParams {
 /**
  * Extracts dominant colors from an image using sharp
  * Returns array of hex colors sorted by dominance (most dominant first)
- * skipDarkColors: when true, filters out near-black colors (for dark background removal)
+ * sampleFromCenter: when true, samples only from center 60% to avoid background edges
  */
-async function extractDominantColors(buffer: Buffer, colorCount: number, skipDarkColors: boolean = false): Promise<string[]> {
+async function extractDominantColors(buffer: Buffer, colorCount: number, sampleFromCenter: boolean = false): Promise<string[]> {
   try {
     // Resize to small size for faster color analysis
     const { data, info } = await sharp(buffer)
@@ -32,21 +32,33 @@ async function extractDominantColors(buffer: Buffer, colorCount: number, skipDar
     // Collect all pixels with their colors
     const pixels: { r: number; g: number; b: number }[] = []
     
-    for (let i = 0; i < data.length; i += info.channels) {
-      const r = data[i]
-      const g = data[i + 1]
-      const b = data[i + 2]
-      
-      // Skip very transparent pixels if RGBA
-      if (info.channels === 4 && data[i + 3] < 128) continue
-      
-      // Skip near-white pixels (likely light background)
-      if (r > 240 && g > 240 && b > 240) continue
-      
-      // Skip near-black pixels if requested (likely dark background)
-      if (skipDarkColors && r < 40 && g < 40 && b < 40) continue
-      
-      pixels.push({ r, g, b })
+    // If sampling from center, define the bounds (center 60%)
+    const centerMargin = sampleFromCenter ? 0.2 : 0 // 20% margin on each side
+    const minX = Math.floor(info.width * centerMargin)
+    const maxX = Math.floor(info.width * (1 - centerMargin))
+    const minY = Math.floor(info.height! * centerMargin)
+    const maxY = Math.floor(info.height! * (1 - centerMargin))
+    
+    for (let y = 0; y < info.height!; y++) {
+      for (let x = 0; x < info.width; x++) {
+        // Skip edge pixels if sampling from center
+        if (sampleFromCenter && (x < minX || x > maxX || y < minY || y > maxY)) {
+          continue
+        }
+        
+        const i = (y * info.width + x) * info.channels
+        const r = data[i]
+        const g = data[i + 1]
+        const b = data[i + 2]
+        
+        // Skip very transparent pixels if RGBA
+        if (info.channels === 4 && data[i + 3] < 128) continue
+        
+        // Skip near-white pixels (likely light background)
+        if (r > 240 && g > 240 && b > 240) continue
+        
+        pixels.push({ r, g, b })
+      }
     }
     
     if (pixels.length === 0) {
@@ -66,17 +78,6 @@ async function extractDominantColors(buffer: Buffer, colorCount: number, skipDar
       const b = Math.round(c.b)
       return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase()
     })
-    
-    // Filter out very dark colors if skipDarkColors is enabled
-    if (skipDarkColors) {
-      colors = colors.filter(color => getColorBrightness(color) > 30)
-      // If all colors were filtered out, return colorful defaults
-      if (colors.length === 0) {
-        return colorCount === 1 
-          ? ['#3B82F6']
-          : ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B'].slice(0, colorCount)
-      }
-    }
     
     // Sort by brightness (darkest first) for consistent layering
     colors.sort((a, b) => {
@@ -231,10 +232,13 @@ async function detectBackgroundColor(buffer: Buffer): Promise<{ r: number; g: nu
 async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBuffer>> {
   const apiKey = process.env.REMOVE_BG_API_KEY
 
+  console.log(`[API] 🔍 Checking remove.bg API key... ${apiKey ? '✅ FOUND (starts with: ' + apiKey.substring(0, 8) + '...)' : '❌ NOT FOUND'}`)
+  console.log(`[API] 📦 Input buffer size: ${buffer.length} bytes`)
+
   // If API key is available, use remove.bg for better results
   if (apiKey) {
     try {
-      console.log("[API] Using remove.bg API for background removal...")
+      console.log("[API] 🚀 Using remove.bg API for background removal...")
       const formData = new FormData()
       formData.append("image_file", new Blob([new Uint8Array(buffer)]), "image.png")
       formData.append("size", "auto")
@@ -247,21 +251,25 @@ async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBu
         body: formData,
       })
 
+      console.log(`[API] 📡 remove.bg response status: ${response.status}`)
+
       if (!response.ok) {
         const error = await response.text()
-        console.error("remove.bg API error:", error)
+        console.error("[API] ❌ remove.bg API error:", error)
         throw new Error(`Background removal failed: ${response.status}`)
       }
 
       const arrayBuffer = await response.arrayBuffer()
-      return Buffer.from(arrayBuffer) as Buffer<ArrayBuffer>
+      const resultBuffer = Buffer.from(arrayBuffer) as Buffer<ArrayBuffer>
+      console.log(`[API] ✅ remove.bg SUCCESS! Output buffer size: ${resultBuffer.length} bytes`)
+      return resultBuffer
     } catch (error) {
-      console.error("remove.bg API error, falling back to local removal:", error)
+      console.error("[API] ⚠️ remove.bg API error, falling back to local removal:", error)
     }
   }
 
   // Local background removal using sharp
-  console.log("[API] Using local background removal...")
+  console.log("[API] 🔧 Using local background removal...")
   
   try {
     // Detect background color from corners
@@ -812,7 +820,7 @@ export async function POST(request: NextRequest) {
       console.log("[API] Auto-detecting colors from image...")
       // Extract at least 2 colors to separate foreground from background
       const colorsToExtract = Math.max(colorCount, shouldRemoveBackground ? 2 : colorCount)
-      // Skip dark colors when removing background (they're likely the dark background)
+      // Sample from center when removing background to avoid edge background pixels
       detectedColors = await extractDominantColors(buffer, colorsToExtract, shouldRemoveBackground)
       
       // If removing background with 1 color, identify the foreground color
