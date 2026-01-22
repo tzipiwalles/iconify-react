@@ -311,8 +311,10 @@ async function traceToSvg(buffer: Buffer): Promise<string> {
         threshold: 128,
         color: "currentColor",
         background: "transparent",
-        turdSize: 2,
-        optTolerance: 0.2,
+        turdSize: 4,           // Remove small noise (increased from 2)
+        optTolerance: 0.1,     // More accurate curves (decreased from 0.2)
+        alphaMax: 1.0,         // Smoother corners
+        turnPolicy: "minority", // Better corner handling
       }
 
       potrace.trace(buffer, params, (err: Error | null, svg: string) => {
@@ -341,8 +343,10 @@ async function posterizeToSvg(buffer: Buffer, colorCount: number): Promise<strin
         fillStrategy: "dominant",
         rangeDistribution: "auto",
         background: "transparent",
-        turdSize: 2,
-        optTolerance: 0.2,
+        turdSize: 4,           // Remove small noise (increased from 2)
+        optTolerance: 0.1,     // More accurate curves (decreased from 0.2)
+        alphaMax: 1.0,         // Smoother corners
+        turnPolicy: "minority", // Better corner handling
       }
 
       potrace.posterize(buffer, params, (err: Error | null, svg: string) => {
@@ -850,7 +854,7 @@ export async function POST(request: NextRequest) {
       // Resize large images to max 512px for faster processing
       console.log("[API] Converting with sharp...")
       const metadata = await sharp(buffer).metadata()
-      const maxDimension = 512
+      const maxDimension = 1024  // Increased for better detail quality
       
       let sharpInstance = sharp(buffer)
       
