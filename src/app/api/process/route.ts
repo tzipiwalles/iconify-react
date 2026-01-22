@@ -195,7 +195,9 @@ async function detectBackgroundColor(buffer: Buffer): Promise<{ r: number; g: nu
   let maxCount = 0
   let bgColor = { r: 255, g: 255, b: 255 } // default white
   
-  for (const { color, count } of colorCounts.values()) {
+  // Convert iterator to array for ES5 compatibility
+  const colorEntries = Array.from(colorCounts.values())
+  for (const { color, count } of colorEntries) {
     if (count > maxCount) {
       maxCount = count
       bgColor = color
