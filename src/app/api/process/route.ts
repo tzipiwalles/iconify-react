@@ -359,25 +359,59 @@ async function posterizeToSvg(buffer: Buffer, colorCount: number): Promise<strin
 }
 
 /**
- * Removes the background path from SVG (usually the first/largest path)
- * This is used when background removal is enabled
+ * Removes the background path from SVG
+ * Identifies background by looking for paths that start at 0,0 and cover the full viewBox
  */
 function removeBackgroundPath(svgString: string): string {
   console.log("[API] Removing background path from SVG...")
   
-  // The first path in posterized SVG is typically the background
-  // We remove it to get only the foreground elements
-  let pathCount = 0
-  const result = svgString.replace(/<path\s+[^>]*?(?:\/?>|>[\s\S]*?<\/path>)/gi, (match) => {
-    pathCount++
-    if (pathCount === 1) {
-      console.log("[API] Removed first path (background)")
-      return '' // Remove the first path (background)
+  // Extract viewBox dimensions
+  const viewBoxMatch = svgString.match(/viewBox="(\d+)\s+(\d+)\s+(\d+)\s+(\d+)"/)
+  const vbWidth = viewBoxMatch ? parseInt(viewBoxMatch[3]) : 0
+  const vbHeight = viewBoxMatch ? parseInt(viewBoxMatch[4]) : 0
+  
+  let removedCount = 0
+  let keptCount = 0
+  
+  const result = svgString.replace(/<path\s+([^>]*?)(?:\/?>|>[\s\S]*?<\/path>)/gi, (match, attrs) => {
+    // Check if the path's d attribute starts with M0 or covers the full area
+    const dMatch = attrs.match(/d="([^"]*)"/)
+    if (dMatch) {
+      const d = dMatch[1]
+      
+      // Background paths typically:
+      // 1. Start at M0 0 or M0 [height/2] (covers from top-left)
+      // 2. Contain the viewBox dimensions
+      // 3. Are simple rectangles covering the whole area
+      
+      const startsAtOrigin = /^M\s*0\s+/.test(d) || /^M\s*0\s*,/.test(d)
+      const containsFullWidth = d.includes(`${vbWidth}`) || d.includes(`${vbWidth - 1}`)
+      const containsFullHeight = d.includes(`${vbHeight}`) || d.includes(`${vbHeight - 1}`)
+      const isLikelyBackground = startsAtOrigin && containsFullWidth && containsFullHeight
+      
+      // Also check if it starts with M0 and immediately has V (vertical) covering height
+      const isFullRect = /^M\s*0\s+[\d.]+V[\d.]+/.test(d) && containsFullWidth
+      
+      if (isLikelyBackground || isFullRect) {
+        console.log("[API] Removed background path (covers full viewBox)")
+        removedCount++
+        return '' // Remove this path
+      }
     }
+    
+    keptCount++
     return match
   })
   
-  console.log(`[API] Kept ${pathCount - 1} foreground paths`)
+  console.log(`[API] Removed ${removedCount} background paths, kept ${keptCount} foreground paths`)
+  
+  // If we didn't remove anything, the background detection failed
+  // In this case, don't modify the SVG
+  if (removedCount === 0) {
+    console.log("[API] No background path detected, keeping original SVG")
+    return svgString
+  }
+  
   return result
 }
 
