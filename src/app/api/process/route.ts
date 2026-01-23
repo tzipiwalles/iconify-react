@@ -444,7 +444,9 @@ function removeBackgroundPath(svgString: string): string {
 /**
  * Replaces colors in SVG with custom brand colors
  * Assigns colors to paths/shapes based on their order
- * Preserves near-white/gray colors (likely text) by not replacing them
+ * Preserves pure white/black colors (likely text) by not replacing them:
+ * - Brightness > 200: white/light gray text
+ * - Brightness < 30: black/dark text
  */
 function applyCustomColors(svgString: string, customColors: string[]): string {
   console.log("[API] Applying custom colors to SVG...")
@@ -463,9 +465,11 @@ function applyCustomColors(svgString: string, customColors: string[]): string {
       const existingColor = fillMatch[1]
       const brightness = getColorBrightness(existingColor)
       
-      // If color is very bright (white/light gray - likely text), preserve it
-      if (brightness > 200) {
-        console.log(`[API] Path ${pathIndex + 1}: preserving bright color ${existingColor} (brightness: ${brightness})`)
+      // Preserve very bright (white/light gray) or very dark (black) colors - likely text
+      // Brightness > 200 = white/light gray
+      // Brightness < 30 = pure black/very dark
+      if (brightness > 200 || brightness < 30) {
+        console.log(`[API] Path ${pathIndex + 1}: preserving text color ${existingColor} (brightness: ${brightness})`)
         pathIndex++
         preservedPaths++
         return match // Keep original
@@ -486,15 +490,16 @@ function applyCustomColors(svgString: string, customColors: string[]): string {
   for (const shape of shapes) {
     const regex = new RegExp(`<${shape}\\s+([^>]*?)(\\/?>)`, 'gi')
     result = result.replace(regex, (match, attrs, ending) => {
-      // Check for existing bright colors
+      // Check for existing bright or very dark colors (likely text)
       const fillMatch = attrs.match(/fill\s*=\s*["']([^"']*)["']/i)
       
       if (fillMatch) {
         const existingColor = fillMatch[1]
         const brightness = getColorBrightness(existingColor)
         
-        if (brightness > 200) {
-          console.log(`[API] ${shape} ${pathIndex + 1}: preserving bright color ${existingColor}`)
+        // Preserve white/light gray or pure black
+        if (brightness > 200 || brightness < 30) {
+          console.log(`[API] ${shape} ${pathIndex + 1}: preserving text color ${existingColor} (brightness: ${brightness})`)
           pathIndex++
           preservedPaths++
           return match
@@ -509,7 +514,7 @@ function applyCustomColors(svgString: string, customColors: string[]): string {
     })
   }
   
-  console.log(`[API] Applied colors to ${pathIndex - preservedPaths} elements, preserved ${preservedPaths} bright elements`)
+  console.log(`[API] Applied colors to ${pathIndex - preservedPaths} elements, preserved ${preservedPaths} text elements (white/black)`)
   console.log("[API] SVG after colors:", result.substring(0, 300))
   return result
 }
