@@ -444,6 +444,7 @@ function removeBackgroundPath(svgString: string): string {
 /**
  * Replaces colors in SVG with custom brand colors
  * Assigns colors to paths/shapes based on their order
+ * Preserves near-white/gray colors (likely text) by not replacing them
  */
 function applyCustomColors(svgString: string, customColors: string[]): string {
   console.log("[API] Applying custom colors to SVG...")
@@ -451,9 +452,26 @@ function applyCustomColors(svgString: string, customColors: string[]): string {
   
   let result = svgString
   let pathIndex = 0
+  let preservedPaths = 0
   
   // Replace fills in path elements (handle both <path .../> and <path ...></path>)
   result = result.replace(/<path\s+([^>]*?)(\/?>)/gi, (match, attrs, ending) => {
+    // Check if path already has a fill color
+    const fillMatch = attrs.match(/fill\s*=\s*["']([^"']*)["']/i)
+    
+    if (fillMatch) {
+      const existingColor = fillMatch[1]
+      const brightness = getColorBrightness(existingColor)
+      
+      // If color is very bright (white/light gray - likely text), preserve it
+      if (brightness > 200) {
+        console.log(`[API] Path ${pathIndex + 1}: preserving bright color ${existingColor} (brightness: ${brightness})`)
+        pathIndex++
+        preservedPaths++
+        return match // Keep original
+      }
+    }
+    
     const color = customColors[pathIndex % customColors.length]
     pathIndex++
     
@@ -468,6 +486,21 @@ function applyCustomColors(svgString: string, customColors: string[]): string {
   for (const shape of shapes) {
     const regex = new RegExp(`<${shape}\\s+([^>]*?)(\\/?>)`, 'gi')
     result = result.replace(regex, (match, attrs, ending) => {
+      // Check for existing bright colors
+      const fillMatch = attrs.match(/fill\s*=\s*["']([^"']*)["']/i)
+      
+      if (fillMatch) {
+        const existingColor = fillMatch[1]
+        const brightness = getColorBrightness(existingColor)
+        
+        if (brightness > 200) {
+          console.log(`[API] ${shape} ${pathIndex + 1}: preserving bright color ${existingColor}`)
+          pathIndex++
+          preservedPaths++
+          return match
+        }
+      }
+      
       const color = customColors[pathIndex % customColors.length]
       pathIndex++
       const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
@@ -476,7 +509,7 @@ function applyCustomColors(svgString: string, customColors: string[]): string {
     })
   }
   
-  console.log(`[API] Applied colors to ${pathIndex} elements`)
+  console.log(`[API] Applied colors to ${pathIndex - preservedPaths} elements, preserved ${preservedPaths} bright elements`)
   console.log("[API] SVG after colors:", result.substring(0, 300))
   return result
 }
