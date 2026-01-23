@@ -16,6 +16,27 @@ interface PotraceParams {
   rangeDistribution?: string
 }
 
+// Output mode types
+type OutputMode = "icon" | "logo"
+
+/**
+ * Configuration for each output mode
+ */
+const MODE_CONFIG = {
+  icon: {
+    colorCount: 1,
+    useCurrentColor: true,
+    viewBox: "0 0 24 24",
+    description: "Standard Icon - single color, themeable"
+  },
+  logo: {
+    colorCount: 6,
+    useCurrentColor: false,
+    viewBox: "preserve", // Will preserve original aspect ratio
+    description: "Brand Logo - original colors, auto-optimized"
+  }
+}
+
 /**
  * Extracts dominant colors from an image using sharp
  * Returns array of hex colors sorted by dominance (most dominant first)
@@ -65,7 +86,7 @@ async function extractDominantColors(buffer: Buffer, colorCount: number, sampleF
       // Return colorful defaults instead of black/gray
       return colorCount === 1 
         ? ['#3B82F6']  // Blue
-        : ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B'].slice(0, colorCount)
+        : ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444'].slice(0, colorCount)
     }
     
     // Use k-means-like clustering to find dominant colors
@@ -93,7 +114,7 @@ async function extractDominantColors(buffer: Buffer, colorCount: number, sampleF
     // Return colorful defaults instead of grayscale
     return colorCount === 1 
       ? ['#3B82F6'] 
-      : ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B'].slice(0, colorCount)
+      : ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444'].slice(0, colorCount)
   }
 }
 
@@ -232,8 +253,7 @@ async function detectBackgroundColor(buffer: Buffer): Promise<{ r: number; g: nu
 async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBuffer>> {
   const apiKey = process.env.REMOVE_BG_API_KEY
 
-  console.log(`[API] 🔍 Checking remove.bg API key... ${apiKey ? '✅ FOUND (starts with: ' + apiKey.substring(0, 8) + '...)' : '❌ NOT FOUND'}`)
-  console.log(`[API] 📦 Input buffer size: ${buffer.length} bytes`)
+  console.log(`[API] 🔍 Checking remove.bg API key... ${apiKey ? '✅ FOUND' : '❌ NOT FOUND'}`)
 
   // If API key is available, use remove.bg for better results
   if (apiKey) {
@@ -335,8 +355,8 @@ async function traceToSvg(buffer: Buffer): Promise<string> {
         threshold: 128,
         color: "currentColor",
         background: "transparent",
-        turdSize: 4,           // Remove small noise (increased from 2)
-        optTolerance: 0.1,     // More accurate curves (decreased from 0.2)
+        turdSize: 4,
+        optTolerance: 0.1,
       }
 
       potrace.trace(buffer, params, (err: Error | null, svg: string) => {
@@ -365,8 +385,8 @@ async function posterizeToSvg(buffer: Buffer, colorCount: number): Promise<strin
         fillStrategy: "dominant",
         rangeDistribution: "auto",
         background: "transparent",
-        turdSize: 4,           // Remove small noise (increased from 2)
-        optTolerance: 0.1,     // More accurate curves (decreased from 0.2)
+        turdSize: 4,
+        optTolerance: 0.1,
       }
 
       potrace.posterize(buffer, params, (err: Error | null, svg: string) => {
@@ -386,12 +406,10 @@ async function posterizeToSvg(buffer: Buffer, colorCount: number): Promise<strin
 
 /**
  * Removes the background path from SVG
- * Identifies background by looking for paths that start at 0,0 and cover the full viewBox
  */
 function removeBackgroundPath(svgString: string): string {
   console.log("[API] Removing background path from SVG...")
   
-  // Extract viewBox dimensions
   const viewBoxMatch = svgString.match(/viewBox="(\d+)\s+(\d+)\s+(\d+)\s+(\d+)"/)
   const vbWidth = viewBoxMatch ? parseInt(viewBoxMatch[3]) : 0
   const vbHeight = viewBoxMatch ? parseInt(viewBoxMatch[4]) : 0
@@ -400,28 +418,21 @@ function removeBackgroundPath(svgString: string): string {
   let keptCount = 0
   
   const result = svgString.replace(/<path\s+([^>]*?)(?:\/?>|>[\s\S]*?<\/path>)/gi, (match, attrs) => {
-    // Check if the path's d attribute starts with M0 or covers the full area
     const dMatch = attrs.match(/d="([^"]*)"/)
     if (dMatch) {
       const d = dMatch[1]
-      
-      // Background paths typically:
-      // 1. Start at M0 0 or M0 [height/2] (covers from top-left)
-      // 2. Contain the viewBox dimensions
-      // 3. Are simple rectangles covering the whole area
       
       const startsAtOrigin = /^M\s*0\s+/.test(d) || /^M\s*0\s*,/.test(d)
       const containsFullWidth = d.includes(`${vbWidth}`) || d.includes(`${vbWidth - 1}`)
       const containsFullHeight = d.includes(`${vbHeight}`) || d.includes(`${vbHeight - 1}`)
       const isLikelyBackground = startsAtOrigin && containsFullWidth && containsFullHeight
       
-      // Also check if it starts with M0 and immediately has V (vertical) covering height
       const isFullRect = /^M\s*0\s+[\d.]+V[\d.]+/.test(d) && containsFullWidth
       
       if (isLikelyBackground || isFullRect) {
         console.log("[API] Removed background path (covers full viewBox)")
         removedCount++
-        return '' // Remove this path
+        return ''
       }
     }
     
@@ -430,62 +441,47 @@ function removeBackgroundPath(svgString: string): string {
   })
   
   console.log(`[API] Removed ${removedCount} background paths, kept ${keptCount} foreground paths`)
-  
-  // If we didn't remove anything, the background detection failed
-  // In this case, don't modify the SVG
-  if (removedCount === 0) {
-    console.log("[API] No background path detected, keeping original SVG")
-    return svgString
-  }
-  
-  return result
+  return removedCount === 0 ? svgString : result
 }
 
 /**
  * Replaces colors in SVG with custom brand colors
- * Maps colors by brightness: dark potrace colors → dark custom colors, light → light
- * Preserves pure white/black colors (likely text) by not replacing them
+ * Maps colors by brightness: dark potrace colors → dark custom colors
  */
 function applyCustomColors(svgString: string, customColors: string[]): string {
-  console.log("[API] Applying custom colors to SVG...")
-  console.log("[API] Custom colors (sorted dark→light):", customColors.join(", "))
+  console.log("[API] Applying brand colors to SVG...")
+  console.log("[API] Colors to apply:", customColors.join(", "))
   
   let result = svgString
   let replacedCount = 0
   let preservedCount = 0
   
-  // Replace fills in path elements (handle both <path .../> and <path ...></path>)
+  // Replace fills in path elements
   result = result.replace(/<path\s+([^>]*?)(\/?>)/gi, (match, attrs, ending) => {
-    // Check if path already has a fill color
     const fillMatch = attrs.match(/fill\s*=\s*["']([^"']*)["']/i)
     
     if (fillMatch) {
       const existingColor = fillMatch[1]
       const brightness = getColorBrightness(existingColor)
       
-      // Preserve very bright (white/light gray) or very dark (black) colors - likely text
-      // Brightness > 200 = white/light gray text
-      // Brightness < 30 = pure black text
+      // Preserve very bright (white) or very dark (black) colors - likely text
       if (brightness > 220 || brightness < 20) {
-        console.log(`[API] Preserving text: ${existingColor} (brightness: ${brightness})`)
+        console.log(`[API] Preserving: ${existingColor} (brightness: ${brightness})`)
         preservedCount++
-        return match // Keep original
+        return match
       }
       
-      // Map grayscale brightness to custom color by similar brightness
-      // potrace creates grayscale (0-255), we map to custom colors by brightness
+      // Map grayscale brightness to custom color
       const colorIndex = Math.floor((brightness / 255) * customColors.length)
       const mappedIndex = Math.min(colorIndex, customColors.length - 1)
       const newColor = customColors[mappedIndex]
       
-      // Remove any existing fill attribute
       const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
-      console.log(`[API] Mapping ${existingColor} (b:${brightness}) → ${newColor} (index:${mappedIndex})`)
+      console.log(`[API] Mapping: ${existingColor} → ${newColor}`)
       replacedCount++
       return `<path ${cleanAttrs} fill="${newColor}"${ending}`
     }
     
-    // No existing fill - apply first color
     const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
     replacedCount++
     return `<path ${cleanAttrs} fill="${customColors[0]}"${ending}`
@@ -496,32 +492,26 @@ function applyCustomColors(svgString: string, customColors: string[]): string {
   for (const shape of shapes) {
     const regex = new RegExp(`<${shape}\\s+([^>]*?)(\\/?>)`, 'gi')
     result = result.replace(regex, (match, attrs, ending) => {
-      // Check for existing colors
       const fillMatch = attrs.match(/fill\s*=\s*["']([^"']*)["']/i)
       
       if (fillMatch) {
         const existingColor = fillMatch[1]
         const brightness = getColorBrightness(existingColor)
         
-        // Preserve text colors
         if (brightness > 220 || brightness < 20) {
-          console.log(`[API] Preserving ${shape} text: ${existingColor}`)
           preservedCount++
           return match
         }
         
-        // Map by brightness
         const colorIndex = Math.floor((brightness / 255) * customColors.length)
         const mappedIndex = Math.min(colorIndex, customColors.length - 1)
         const newColor = customColors[mappedIndex]
         
         const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
-        console.log(`[API] ${shape}: ${existingColor} (b:${brightness}) → ${newColor}`)
         replacedCount++
         return `<${shape} ${cleanAttrs} fill="${newColor}"${ending}`
       }
       
-      // No existing fill - apply first color
       const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
       replacedCount++
       return `<${shape} ${cleanAttrs} fill="${customColors[0]}"${ending}`
@@ -558,18 +548,22 @@ function getColorBrightness(color: string): number {
     }
   }
   
-  // Perceived brightness formula
   return (r * 299 + g * 587 + b * 114) / 1000
 }
 
 /**
  * Optimizes SVG string with SVGO
- * - Forces viewBox to 0 0 24 24
- * - Converts fills/strokes to currentColor (only for monochrome)
- * - Removes width/height attributes
- * - Sets float precision to 1
+ * For Icon mode: forces 24x24 viewBox and currentColor
+ * For Logo mode: preserves aspect ratio and colors
  */
-function optimizeSvg(svgString: string, useCurrentColor: boolean = true, removeFillOpacity: boolean = false): string {
+function optimizeSvg(
+  svgString: string, 
+  mode: OutputMode,
+  originalWidth?: number,
+  originalHeight?: number
+): string {
+  const config = MODE_CONFIG[mode]
+  
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const plugins: any[] = [
     {
@@ -581,26 +575,42 @@ function optimizeSvg(svgString: string, useCurrentColor: boolean = true, removeF
         },
       },
     },
-    // Remove width and height attributes (and optionally fill-opacity)
+    // Remove width and height attributes
     {
       name: "removeAttrs",
       params: {
-        attrs: removeFillOpacity 
-          ? ["width", "height", "fill-opacity", "fillOpacity"] 
+        attrs: mode === "logo" 
+          ? ["width", "height", "fill-opacity", "fillOpacity"]
           : ["width", "height"],
-      },
-    },
-    // Add/update viewBox to 24x24
-    {
-      name: "addAttributesToSVGElement",
-      params: {
-        attributes: [{ viewBox: "0 0 24 24" }],
       },
     },
   ]
 
-  // Only convert to currentColor for monochrome SVGs
-  if (useCurrentColor) {
+  // Set viewBox based on mode
+  if (mode === "icon") {
+    // Icon mode: force 24x24 viewBox
+    plugins.push({
+      name: "addAttributesToSVGElement",
+      params: {
+        attributes: [{ viewBox: "0 0 24 24" }],
+      },
+    })
+  } else if (mode === "logo" && originalWidth && originalHeight) {
+    // Logo mode: preserve aspect ratio with reasonable dimensions
+    const maxDim = 100
+    const scale = maxDim / Math.max(originalWidth, originalHeight)
+    const scaledWidth = Math.round(originalWidth * scale)
+    const scaledHeight = Math.round(originalHeight * scale)
+    plugins.push({
+      name: "addAttributesToSVGElement",
+      params: {
+        attributes: [{ viewBox: `0 0 ${scaledWidth} ${scaledHeight}` }],
+      },
+    })
+  }
+
+  // Only convert to currentColor for Icon mode
+  if (config.useCurrentColor) {
     plugins.push(
       {
         name: "convertColors",
@@ -608,7 +618,6 @@ function optimizeSvg(svgString: string, useCurrentColor: boolean = true, removeF
           currentColor: true,
         },
       },
-      // Custom plugin to ensure all fills and strokes use currentColor
       {
         name: "customColorReplace",
         fn: () => {
@@ -640,7 +649,6 @@ function optimizeSvg(svgString: string, useCurrentColor: boolean = true, removeF
 
 /**
  * Converts SVG attribute names to JSX-compatible camelCase
- * e.g., fill-opacity -> fillOpacity, stroke-width -> strokeWidth
  */
 function svgToJsxAttributes(svgString: string): string {
   const attributeMap: Record<string, string> = {
@@ -684,9 +692,7 @@ function svgToJsxAttributes(svgString: string): string {
   
   let result = svgString
   
-  // Replace each SVG attribute with its JSX equivalent
   for (const [svgAttr, jsxAttr] of Object.entries(attributeMap)) {
-    // Match attribute="value" pattern
     const regex = new RegExp(`\\b${svgAttr}=`, 'g')
     result = result.replace(regex, `${jsxAttr}=`)
   }
@@ -696,24 +702,19 @@ function svgToJsxAttributes(svgString: string): string {
 
 /**
  * Generates a React TSX component from optimized SVG
- * Uses simplified syntax for maximum compatibility with AI platforms like Base44
  */
-function generateReactComponent(svgContent: string, componentName: string, isMonochrome: boolean = true): string {
-  // Extract the inner content of the SVG (everything between <svg> and </svg>)
+function generateReactComponent(svgContent: string, componentName: string, mode: OutputMode): string {
   const svgInnerMatch = svgContent.match(/<svg[^>]*>([\s\S]*)<\/svg>/i)
   let innerContent = svgInnerMatch ? svgInnerMatch[1].trim() : ""
   
-  // Convert SVG attributes to JSX-compatible camelCase
   innerContent = svgToJsxAttributes(innerContent)
 
-  // Extract viewBox from the original SVG
   const viewBoxMatch = svgContent.match(/viewBox="([^"]*)"/)
   const viewBox = viewBoxMatch ? viewBoxMatch[1] : "0 0 24 24"
 
-  // For monochrome, use fill="currentColor", for multi-color, don't override fills
-  const fillProp = isMonochrome ? '\n      fill="currentColor"' : ''
+  // For icon mode, use fill="currentColor", for logo mode, don't override
+  const fillProp = mode === "icon" ? '\n      fill="currentColor"' : ''
 
-  // Simplified component syntax for better compatibility
   const component = `import React from "react"
 
 export default function ${componentName}({ size = 24, className, ...props }) {
@@ -742,7 +743,6 @@ async function uploadToSupabase(
   svgContent: string,
   fileName: string
 ): Promise<string | null> {
-  // Check if Supabase is configured
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     console.log("Supabase not configured, skipping upload")
     return null
@@ -776,43 +776,37 @@ async function uploadToSupabase(
 
 /**
  * Generates a valid component name from filename
- * - Limits to max 25 characters for readability
- * - Falls back to "CustomIcon" + timestamp if name is problematic
  */
-function generateComponentName(filename: string, customName?: string): string {
+function generateComponentName(filename: string, customName?: string, mode?: OutputMode): string {
   const MAX_LENGTH = 25
+  const suffix = mode === "icon" ? "Icon" : "Logo"
   
-  // Use custom name if provided
   if (customName && customName.trim()) {
     const sanitized = customName
       .trim()
       .replace(/[^a-zA-Z0-9]/g, "")
     
     if (sanitized.length > 0) {
-      // Ensure it starts with uppercase letter
       const pascalCase = sanitized.charAt(0).toUpperCase() + sanitized.slice(1)
       return pascalCase.slice(0, MAX_LENGTH)
     }
   }
   
-  // Remove extension and invalid characters
   const baseName = filename
-    .replace(/\.[^.]+$/, "") // Remove extension
-    .replace(/[^a-zA-Z0-9]/g, " ") // Replace invalid chars with space
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^a-zA-Z0-9]/g, " ")
     .split(" ")
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join("")
 
-  // Ensure it starts with a letter
-  let safeName = baseName.match(/^[A-Z]/) ? baseName : `Icon${baseName}`
+  let safeName = baseName.match(/^[A-Z]/) ? baseName : `${suffix}${baseName}`
   
-  // Truncate if too long
   if (safeName.length > MAX_LENGTH) {
     safeName = safeName.slice(0, MAX_LENGTH)
   }
 
-  return safeName || "CustomIcon"
+  return safeName || `Custom${suffix}`
 }
 
 export async function POST(request: NextRequest) {
@@ -823,21 +817,17 @@ export async function POST(request: NextRequest) {
     
     const formData = await request.formData()
     const file = formData.get("file") as File | null
+    const mode = (formData.get("mode") as OutputMode) || "icon"
     const shouldRemoveBackground = formData.get("removeBackground") === "true"
-    const colorCount = parseInt(formData.get("colorCount") as string) || 1
-    const customColorsRaw = formData.get("customColors") as string
-    const autoDetectColors = formData.get("autoDetectColors") === "true"
     const customComponentName = formData.get("componentName") as string | null
     
-    console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Form data parsed`)
+    // Get mode configuration
+    const modeConfig = MODE_CONFIG[mode]
+    const colorCount = modeConfig.colorCount
     
-    let customColors: string[] = ["currentColor"]
-    
-    try {
-      customColors = JSON.parse(customColorsRaw || '["currentColor"]')
-    } catch {
-      console.log("[API] Failed to parse custom colors, using default")
-    }
+    console.log(`[API] Mode: ${mode} (${modeConfig.description})`)
+    console.log(`[API] Remove background: ${shouldRemoveBackground}`)
+    console.log(`[API] Color count: ${colorCount}`)
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
@@ -845,9 +835,9 @@ export async function POST(request: NextRequest) {
 
     const fileName = file.name
     const fileType = file.type
-    const componentName = generateComponentName(fileName, customComponentName || undefined)
+    const componentName = generateComponentName(fileName, customComponentName || undefined, mode)
     
-    console.log(`[API] Processing: ${fileName} (${fileType}), colors: ${colorCount}, autoDetect: ${autoDetectColors}`)
+    console.log(`[API] Processing: ${fileName} (${fileType})`)
 
     // Read file as buffer
     const arrayBuffer = await file.arrayBuffer()
@@ -855,14 +845,27 @@ export async function POST(request: NextRequest) {
     console.log(`[API] File buffer size: ${buffer.length} bytes`)
 
     let svgString: string
-    // True monochrome only if: 1 color AND no auto-detect AND no background removal
-    const isMonochrome = colorCount === 1 && !autoDetectColors && !shouldRemoveBackground
     let detectedColors: string[] = []
+    let originalWidth: number | undefined
+    let originalHeight: number | undefined
 
     // Step 1: Handle different file types
     if (fileType === "image/svg+xml" || fileName.toLowerCase().endsWith(".svg")) {
       console.log("[API] Processing as SVG...")
       svgString = buffer.toString("utf-8")
+      
+      // Extract original dimensions from SVG for logo mode
+      const widthMatch = svgString.match(/width="(\d+)"/)
+      const heightMatch = svgString.match(/height="(\d+)"/)
+      const vbMatch = svgString.match(/viewBox="[\d.]+ [\d.]+ ([\d.]+) ([\d.]+)"/)
+      
+      if (widthMatch && heightMatch) {
+        originalWidth = parseInt(widthMatch[1])
+        originalHeight = parseInt(heightMatch[1])
+      } else if (vbMatch) {
+        originalWidth = parseFloat(vbMatch[1])
+        originalHeight = parseFloat(vbMatch[2])
+      }
     } else if (
       fileType === "image/png" ||
       fileType === "image/jpeg" ||
@@ -870,35 +873,28 @@ export async function POST(request: NextRequest) {
     ) {
       console.log("[API] Processing as raster image...")
 
-      // Step 2: Background removal (if requested) - DO THIS FIRST!
+      // Get original dimensions for logo mode
+      const metadata = await sharp(buffer).metadata()
+      originalWidth = metadata.width
+      originalHeight = metadata.height
+
+      // Step 2: Background removal (if requested)
       if (shouldRemoveBackground) {
-        console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Starting background removal...`)
+        console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Starting background removal...`)
         buffer = await removeBackgroundFromImage(buffer)
-        console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Background removal complete`)
+        console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Background removal complete`)
       }
       
-      // Step 2b: Extract colors AFTER background removal for accurate colors
-      // Extract colors if:
-      // - auto-detect is enabled, OR
-      // - multi-color mode with default colors
-      const shouldExtractColors = autoDetectColors || 
-        (!isMonochrome && (customColors[0] === "currentColor" || customColors.length === 0))
-      
-      if (shouldExtractColors) {
-        console.log("[API] Auto-detecting colors from image (after bg removal)...")
-        // No need to sample from center anymore since background is already removed
+      // Step 3: Extract colors for logo mode (after background removal)
+      if (mode === "logo") {
+        console.log("[API] Detecting brand colors...")
         detectedColors = await extractDominantColors(buffer, colorCount, false)
-        
-        if (detectedColors.length > 0) {
-          customColors = detectedColors.slice(0, colorCount)
-        }
+        console.log(`[API] Detected ${detectedColors.length} colors: ${detectedColors.join(", ")}`)
       }
 
-      // Step 3: Resize and convert to PNG with sharp
-      // Resize large images to max 512px for faster processing
-      console.log("[API] Converting with sharp...")
-      const metadata = await sharp(buffer).metadata()
-      const maxDimension = 1024  // Increased for better detail quality
+      // Step 4: Resize for processing
+      console.log("[API] Resizing image for vectorization...")
+      const maxDimension = 1024
       
       let sharpInstance = sharp(buffer)
       
@@ -913,20 +909,17 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      const processedBuffer = await sharpInstance
-        .png()
-        .toBuffer()
-      console.log(`[API] Sharp processed: ${processedBuffer.length} bytes`)
+      const processedBuffer = await sharpInstance.png().toBuffer()
 
-      // Step 4: Vectorize using potrace
-      if (isMonochrome) {
-        console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Tracing with potrace (monochrome)...`)
+      // Step 5: Vectorize using potrace
+      if (mode === "icon") {
+        console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Tracing (icon mode)...`)
         svgString = await traceToSvg(processedBuffer)
       } else {
-        console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Posterizing with potrace (${colorCount} colors)...`)
+        console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Posterizing (logo mode, ${colorCount} colors)...`)
         svgString = await posterizeToSvg(processedBuffer, colorCount)
       }
-      console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Potrace completed`)
+      console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Vectorization complete`)
     } else {
       return NextResponse.json(
         { error: `Unsupported file type: ${fileType}. Please upload PNG, JPG, or SVG.` },
@@ -934,33 +927,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 5: Optimize SVG
+    // Step 6: Optimize SVG
     console.log("[API] Optimizing SVG...")
-    // Use currentColor only when: 1 color AND no auto-detect AND no background removal
-    const useCurrentColor = colorCount === 1 && !autoDetectColors && !shouldRemoveBackground
-    // Remove fill-opacity to get solid colors
-    const removeFillOpacity = colorCount > 1 || (colorCount === 1 && shouldRemoveBackground)
-    let optimizedSvg = optimizeSvg(svgString, useCurrentColor, removeFillOpacity)
+    let optimizedSvg = optimizeSvg(svgString, mode, originalWidth, originalHeight)
     
-    // Step 5a: Remove background path if background removal was requested
+    // Step 7: Remove background path if background removal was requested
     if (shouldRemoveBackground) {
       optimizedSvg = removeBackgroundPath(optimizedSvg)
     }
     
-    // Step 5b: Apply custom/detected colors (if not using currentColor)
-    // Note: potrace creates grayscale SVG, so we MUST apply the detected colors
-    // whether they were auto-detected or manually selected
-    if (!useCurrentColor && customColors.length > 0 && customColors[0] !== "currentColor") {
-      const colorSource = autoDetectColors ? "auto-detected" : "user-selected"
-      console.log(`[API] Applying ${colorSource} colors: ${customColors.join(", ")}`)
-      optimizedSvg = applyCustomColors(optimizedSvg, customColors)
+    // Step 8: Apply brand colors for logo mode
+    if (mode === "logo" && detectedColors.length > 0) {
+      console.log(`[API] Applying brand colors: ${detectedColors.join(", ")}`)
+      optimizedSvg = applyCustomColors(optimizedSvg, detectedColors)
     }
 
-    // Step 6: Generate React component
+    // Step 9: Generate React component
     console.log("[API] Generating React component...")
-    const reactComponent = generateReactComponent(optimizedSvg, componentName, useCurrentColor)
+    const reactComponent = generateReactComponent(optimizedSvg, componentName, mode)
 
-    // Step 7: Upload to Supabase (optional)
+    // Step 10: Upload to Supabase (optional)
     const timestamp = Date.now()
     const svgFileName = `${componentName.toLowerCase()}-${timestamp}.svg`
     const publicUrl = await uploadToSupabase(optimizedSvg, svgFileName)
@@ -969,7 +955,7 @@ export async function POST(request: NextRequest) {
     console.log(`[API] ✅ Processing complete! Total time: ${totalTime}ms`)
     
     if (totalTime > 8000) {
-      console.warn(`[API] ⚠️  WARNING: Processing took ${totalTime}ms - close to Vercel timeout (10s)`)
+      console.warn(`[API] ⚠️ WARNING: Processing took ${totalTime}ms - close to Vercel timeout`)
     }
     
     return NextResponse.json({
@@ -980,7 +966,8 @@ export async function POST(request: NextRequest) {
         reactComponent,
         publicUrl,
         originalFileName: fileName,
-        detectedColors: useCurrentColor ? [] : customColors,
+        detectedColors: mode === "logo" ? detectedColors : [],
+        mode,
       },
     })
   } catch (error) {

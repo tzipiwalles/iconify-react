@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { UploadZone } from "@/components/upload-zone"
-import { SettingsPanel } from "@/components/settings-panel"
+import { SettingsPanel, OutputMode } from "@/components/settings-panel"
 import { ResultsPanel } from "@/components/results-panel"
 import { Button } from "@/components/ui/button"
 import { Zap, Github, Sparkles } from "lucide-react"
@@ -18,10 +18,8 @@ interface ProcessedResult {
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [mode, setMode] = useState<OutputMode>("icon")
   const [removeBackground, setRemoveBackground] = useState(false)
-  const [colorCount, setColorCount] = useState(1)
-  const [customColors, setCustomColors] = useState<string[]>(["currentColor"])
-  const [autoDetectColors, setAutoDetectColors] = useState(true)
   const [componentName, setComponentName] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [result, setResult] = useState<ProcessedResult | null>(null)
@@ -37,20 +35,7 @@ export default function Home() {
     setSelectedFile(null)
     setResult(null)
     setError(null)
-    setCustomColors(["currentColor"])
-    setAutoDetectColors(true)
     setComponentName("")
-  }
-
-  const handleColorCountChange = (count: number) => {
-    setColorCount(count)
-    if (count === 1) {
-      setCustomColors(["currentColor"])
-    } else if (!autoDetectColors && customColors.length === 1 && customColors[0] === "currentColor") {
-      // Initialize with default brand colors
-      const defaultColors = ["#1F2937", "#4B5563", "#9CA3AF", "#D1D5DB", "#F3F4F6"]
-      setCustomColors(defaultColors.slice(0, count))
-    }
   }
 
   const handleProcess = async () => {
@@ -63,11 +48,7 @@ export default function Home() {
       const formData = new FormData()
       formData.append("file", selectedFile)
       formData.append("removeBackground", removeBackground.toString())
-      formData.append("colorCount", colorCount.toString())
-      formData.append("autoDetectColors", autoDetectColors.toString())
-      formData.append("customColors", JSON.stringify(
-        colorCount === 1 ? ["currentColor"] : (autoDetectColors ? [] : customColors)
-      ))
+      formData.append("mode", mode)
       if (componentName.trim()) {
         formData.append("componentName", componentName.trim())
       }
@@ -84,15 +65,6 @@ export default function Home() {
       }
 
       setResult(data.data)
-      
-      // Update custom colors with detected colors
-      if (data.data.detectedColors && data.data.detectedColors.length > 0) {
-        setCustomColors(data.data.detectedColors)
-        // Turn off auto-detect so user can now edit
-        if (autoDetectColors) {
-          setAutoDetectColors(false)
-        }
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -133,7 +105,7 @@ export default function Home() {
             </span>
             <Button variant="ghost" size="icon" className="rounded-xl" asChild>
               <a
-                href="https://github.com"
+                href="https://github.com/tzipiwalles/iconify-react"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -154,8 +126,8 @@ export default function Home() {
             </span>
           </h2>
           <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Upload your images or SVGs and get optimized, standardized React
-            components with auto-detected brand colors.
+            Upload your images or SVGs and get optimized, AI-friendly React
+            components — ready for any coding workflow.
           </p>
         </div>
 
@@ -181,14 +153,10 @@ export default function Home() {
           {/* Right column - Settings */}
           <div className="space-y-6">
             <SettingsPanel
+              mode={mode}
+              onModeChange={setMode}
               removeBackground={removeBackground}
               onRemoveBackgroundChange={setRemoveBackground}
-              colorCount={colorCount}
-              onColorCountChange={handleColorCountChange}
-              customColors={customColors}
-              onCustomColorsChange={setCustomColors}
-              autoDetectColors={autoDetectColors}
-              onAutoDetectColorsChange={setAutoDetectColors}
               componentName={componentName}
               onComponentNameChange={setComponentName}
               isProcessing={isProcessing}
@@ -207,73 +175,98 @@ export default function Home() {
               ) : (
                 <>
                   <Zap className="h-5 w-5" />
-                  {result ? "Re-process with Changes" : "Generate Component"}
+                  {result ? "Re-process" : mode === "icon" ? "Generate Icon" : "Generate Logo"}
                 </>
               )}
             </Button>
 
-            {/* Detected Colors Display */}
-            {result?.detectedColors && result.detectedColors.length > 0 && (
+            {/* Detected Colors Display - only for logo mode */}
+            {mode === "logo" && result?.detectedColors && result.detectedColors.length > 0 && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
                 <div className="mb-3 flex items-center gap-2 text-sm font-medium text-emerald-400">
                   <Sparkles className="h-4 w-4" />
-                  Detected Colors
+                  Auto-Detected Colors ({result.detectedColors.length})
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {result.detectedColors.map((color, i) => (
                     <div
                       key={i}
                       className="group relative"
                     >
                       <div
-                        className="h-8 w-8 rounded-lg border border-white/20 shadow-sm"
+                        className="h-8 w-8 rounded-lg border border-white/20 shadow-sm transition-transform hover:scale-110"
                         style={{ backgroundColor: color }}
                         title={color}
                       />
-                      <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100">
+                      <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
                         {color}
                       </span>
                     </div>
                   ))}
                 </div>
-                <p className="mt-4 text-xs text-muted-foreground">
-                  Edit colors above and click &quot;Re-process&quot; to apply changes
-                </p>
               </div>
             )}
 
             {/* Info card */}
             <div className="rounded-xl border border-border bg-card/50 p-5">
               <h4 className="mb-3.5 text-sm font-semibold">
-                Output Specifications
+                {mode === "icon" ? "Icon Output" : "Logo Output"}
               </h4>
               <ul className="space-y-2.5 text-sm leading-relaxed text-muted-foreground">
+                {mode === "icon" ? (
+                  <>
+                    <li className="flex items-start gap-2.5">
+                      <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                      <span>
+                        <strong className="font-medium text-foreground">viewBox:</strong> 0 0 24 24
+                        (standardized)
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                      <span>
+                        <strong className="font-medium text-foreground">Fill:</strong>{" "}
+                        currentColor (CSS themeable)
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                      <span>
+                        <strong className="font-medium text-foreground">Compatible with:</strong>{" "}
+                        Lucide, Heroicons, shadcn/ui
+                      </span>
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li className="flex items-start gap-2.5">
+                      <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-500" />
+                      <span>
+                        <strong className="font-medium text-foreground">viewBox:</strong> Original
+                        aspect ratio preserved
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-500" />
+                      <span>
+                        <strong className="font-medium text-foreground">Colors:</strong>{" "}
+                        Up to 6 auto-optimized
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-500" />
+                      <span>
+                        <strong className="font-medium text-foreground">Perfect for:</strong>{" "}
+                        Brand logos, illustrations
+                      </span>
+                    </li>
+                  </>
+                )}
                 <li className="flex items-start gap-2.5">
-                  <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                  <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-500" />
                   <span>
-                    <strong className="font-medium text-foreground">viewBox:</strong> 0 0 24 24
-                    (standardized)
-                  </span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
-                  <span>
-                    <strong className="font-medium text-foreground">Colors:</strong>{" "}
-                    {colorCount === 1 ? "currentColor (themeable)" : `${colorCount} auto-detected/custom`}
-                  </span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
-                  <span>
-                    <strong className="font-medium text-foreground">Size:</strong> CSS
-                    controlled (no fixed w/h)
-                  </span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
-                  <span>
-                    <strong className="font-medium text-foreground">Format:</strong>{" "}
-                    React TSX component
+                    <strong className="font-medium text-foreground">Output:</strong>{" "}
+                    React TSX + SVG file
                   </span>
                 </li>
               </ul>
