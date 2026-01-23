@@ -934,10 +934,13 @@ export async function POST(request: NextRequest) {
       optimizedSvg = removeBackgroundPath(optimizedSvg)
     }
     
-    // Step 5b: Apply custom/detected colors (if not using currentColor)
-    if (!useCurrentColor && customColors.length > 0 && customColors[0] !== "currentColor") {
-      console.log(`[API] Applying custom colors: ${customColors.join(", ")}`)
+    // Step 5b: Apply custom colors ONLY if user manually selected them (not auto-detected)
+    // When auto-detect is ON, potrace already has the correct colors from the image!
+    if (!useCurrentColor && !autoDetectColors && customColors.length > 0 && customColors[0] !== "currentColor") {
+      console.log(`[API] Applying user-selected custom colors: ${customColors.join(", ")}`)
       optimizedSvg = applyCustomColors(optimizedSvg, customColors)
+    } else if (autoDetectColors) {
+      console.log(`[API] ✅ Auto-detect enabled - keeping original colors from image`)
     }
 
     // Step 6: Generate React component
