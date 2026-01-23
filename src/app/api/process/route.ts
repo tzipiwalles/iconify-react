@@ -765,8 +765,10 @@ function generateComponentName(filename: string, customName?: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
   try {
-    console.log("[API] Starting file processing...")
+    console.log("[API] ========== Starting file processing ==========")
+    console.log(`[API] Environment: ${process.env.VERCEL ? 'Vercel' : 'Local'}`)
     
     const formData = await request.formData()
     const file = formData.get("file") as File | null
@@ -775,6 +777,8 @@ export async function POST(request: NextRequest) {
     const customColorsRaw = formData.get("customColors") as string
     const autoDetectColors = formData.get("autoDetectColors") === "true"
     const customComponentName = formData.get("componentName") as string | null
+    
+    console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Form data parsed`)
     
     let customColors: string[] = ["currentColor"]
     
@@ -817,8 +821,9 @@ export async function POST(request: NextRequest) {
 
       // Step 2: Background removal (if requested) - DO THIS FIRST!
       if (shouldRemoveBackground) {
-        console.log("[API] Attempting background removal...")
+        console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Starting background removal...`)
         buffer = await removeBackgroundFromImage(buffer)
+        console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Background removal complete`)
       }
       
       // Step 2b: Extract colors AFTER background removal for accurate colors
@@ -864,13 +869,13 @@ export async function POST(request: NextRequest) {
 
       // Step 4: Vectorize using potrace
       if (isMonochrome) {
-        console.log("[API] Tracing with potrace (monochrome)...")
+        console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Tracing with potrace (monochrome)...`)
         svgString = await traceToSvg(processedBuffer)
       } else {
-        console.log(`[API] Posterizing with potrace (${colorCount} colors)...`)
+        console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Posterizing with potrace (${colorCount} colors)...`)
         svgString = await posterizeToSvg(processedBuffer, colorCount)
       }
-      console.log("[API] Potrace completed")
+      console.log(`[API] ⏱️  Elapsed: ${Date.now() - startTime}ms - Potrace completed`)
     } else {
       return NextResponse.json(
         { error: `Unsupported file type: ${fileType}. Please upload PNG, JPG, or SVG.` },
@@ -906,7 +911,12 @@ export async function POST(request: NextRequest) {
     const svgFileName = `${componentName.toLowerCase()}-${timestamp}.svg`
     const publicUrl = await uploadToSupabase(optimizedSvg, svgFileName)
 
-    console.log("[API] Processing complete!")
+    const totalTime = Date.now() - startTime
+    console.log(`[API] ✅ Processing complete! Total time: ${totalTime}ms`)
+    
+    if (totalTime > 8000) {
+      console.warn(`[API] ⚠️  WARNING: Processing took ${totalTime}ms - close to Vercel timeout (10s)`)
+    }
     
     return NextResponse.json({
       success: true,
@@ -920,11 +930,13 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("[API] Processing error:", error)
+    const totalTime = Date.now() - startTime
+    console.error(`[API] ❌ Processing error after ${totalTime}ms:`, error)
     return NextResponse.json(
       {
         error: "Failed to process file",
         details: error instanceof Error ? error.message : "Unknown error",
+        processingTime: `${totalTime}ms`,
       },
       { status: 500 }
     )
