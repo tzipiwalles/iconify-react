@@ -443,18 +443,16 @@ function removeBackgroundPath(svgString: string): string {
 
 /**
  * Replaces colors in SVG with custom brand colors
- * Assigns colors to paths/shapes based on their order
- * Preserves pure white/black colors (likely text) by not replacing them:
- * - Brightness > 200: white/light gray text
- * - Brightness < 30: black/dark text
+ * Maps colors by brightness: dark potrace colors → dark custom colors, light → light
+ * Preserves pure white/black colors (likely text) by not replacing them
  */
 function applyCustomColors(svgString: string, customColors: string[]): string {
   console.log("[API] Applying custom colors to SVG...")
-  console.log("[API] SVG before colors:", svgString.substring(0, 300))
+  console.log("[API] Custom colors (sorted dark→light):", customColors.join(", "))
   
   let result = svgString
-  let pathIndex = 0
-  let preservedPaths = 0
+  let replacedCount = 0
+  let preservedCount = 0
   
   // Replace fills in path elements (handle both <path .../> and <path ...></path>)
   result = result.replace(/<path\s+([^>]*?)(\/?>)/gi, (match, attrs, ending) => {
@@ -466,23 +464,31 @@ function applyCustomColors(svgString: string, customColors: string[]): string {
       const brightness = getColorBrightness(existingColor)
       
       // Preserve very bright (white/light gray) or very dark (black) colors - likely text
-      // Brightness > 200 = white/light gray
-      // Brightness < 30 = pure black/very dark
-      if (brightness > 200 || brightness < 30) {
-        console.log(`[API] Path ${pathIndex + 1}: preserving text color ${existingColor} (brightness: ${brightness})`)
-        pathIndex++
-        preservedPaths++
+      // Brightness > 200 = white/light gray text
+      // Brightness < 30 = pure black text
+      if (brightness > 220 || brightness < 20) {
+        console.log(`[API] Preserving text: ${existingColor} (brightness: ${brightness})`)
+        preservedCount++
         return match // Keep original
       }
+      
+      // Map grayscale brightness to custom color by similar brightness
+      // potrace creates grayscale (0-255), we map to custom colors by brightness
+      const colorIndex = Math.floor((brightness / 255) * customColors.length)
+      const mappedIndex = Math.min(colorIndex, customColors.length - 1)
+      const newColor = customColors[mappedIndex]
+      
+      // Remove any existing fill attribute
+      const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
+      console.log(`[API] Mapping ${existingColor} (b:${brightness}) → ${newColor} (index:${mappedIndex})`)
+      replacedCount++
+      return `<path ${cleanAttrs} fill="${newColor}"${ending}`
     }
     
-    const color = customColors[pathIndex % customColors.length]
-    pathIndex++
-    
-    // Remove any existing fill attribute
+    // No existing fill - apply first color
     const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
-    console.log(`[API] Path ${pathIndex}: applying ${color}`)
-    return `<path ${cleanAttrs} fill="${color}"${ending}`
+    replacedCount++
+    return `<path ${cleanAttrs} fill="${customColors[0]}"${ending}`
   })
   
   // Also handle rect, circle, polygon, ellipse
@@ -490,32 +496,39 @@ function applyCustomColors(svgString: string, customColors: string[]): string {
   for (const shape of shapes) {
     const regex = new RegExp(`<${shape}\\s+([^>]*?)(\\/?>)`, 'gi')
     result = result.replace(regex, (match, attrs, ending) => {
-      // Check for existing bright or very dark colors (likely text)
+      // Check for existing colors
       const fillMatch = attrs.match(/fill\s*=\s*["']([^"']*)["']/i)
       
       if (fillMatch) {
         const existingColor = fillMatch[1]
         const brightness = getColorBrightness(existingColor)
         
-        // Preserve white/light gray or pure black
-        if (brightness > 200 || brightness < 30) {
-          console.log(`[API] ${shape} ${pathIndex + 1}: preserving text color ${existingColor} (brightness: ${brightness})`)
-          pathIndex++
-          preservedPaths++
+        // Preserve text colors
+        if (brightness > 220 || brightness < 20) {
+          console.log(`[API] Preserving ${shape} text: ${existingColor}`)
+          preservedCount++
           return match
         }
+        
+        // Map by brightness
+        const colorIndex = Math.floor((brightness / 255) * customColors.length)
+        const mappedIndex = Math.min(colorIndex, customColors.length - 1)
+        const newColor = customColors[mappedIndex]
+        
+        const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
+        console.log(`[API] ${shape}: ${existingColor} (b:${brightness}) → ${newColor}`)
+        replacedCount++
+        return `<${shape} ${cleanAttrs} fill="${newColor}"${ending}`
       }
       
-      const color = customColors[pathIndex % customColors.length]
-      pathIndex++
+      // No existing fill - apply first color
       const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
-      console.log(`[API] ${shape} ${pathIndex}: applying ${color}`)
-      return `<${shape} ${cleanAttrs} fill="${color}"${ending}`
+      replacedCount++
+      return `<${shape} ${cleanAttrs} fill="${customColors[0]}"${ending}`
     })
   }
   
-  console.log(`[API] Applied colors to ${pathIndex - preservedPaths} elements, preserved ${preservedPaths} text elements (white/black)`)
-  console.log("[API] SVG after colors:", result.substring(0, 300))
+  console.log(`[API] ✅ Applied ${replacedCount} colors, preserved ${preservedCount} text elements`)
   return result
 }
 
@@ -934,13 +947,13 @@ export async function POST(request: NextRequest) {
       optimizedSvg = removeBackgroundPath(optimizedSvg)
     }
     
-    // Step 5b: Apply custom colors ONLY if user manually selected them (not auto-detected)
-    // When auto-detect is ON, potrace already has the correct colors from the image!
-    if (!useCurrentColor && !autoDetectColors && customColors.length > 0 && customColors[0] !== "currentColor") {
-      console.log(`[API] Applying user-selected custom colors: ${customColors.join(", ")}`)
+    // Step 5b: Apply custom/detected colors (if not using currentColor)
+    // Note: potrace creates grayscale SVG, so we MUST apply the detected colors
+    // whether they were auto-detected or manually selected
+    if (!useCurrentColor && customColors.length > 0 && customColors[0] !== "currentColor") {
+      const colorSource = autoDetectColors ? "auto-detected" : "user-selected"
+      console.log(`[API] Applying ${colorSource} colors: ${customColors.join(", ")}`)
       optimizedSvg = applyCustomColors(optimizedSvg, customColors)
-    } else if (autoDetectColors) {
-      console.log(`[API] ✅ Auto-detect enabled - keeping original colors from image`)
     }
 
     // Step 6: Generate React component
