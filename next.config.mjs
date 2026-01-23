@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['sharp', 'potrace'],
+    serverComponentsExternalPackages: ['sharp', 'potrace', 'svgo'],
   },
   
   // Disable image optimization 
@@ -15,6 +15,7 @@ const nextConfig = {
       config.externals.push({
         'sharp': 'commonjs sharp',
         'potrace': 'commonjs potrace',
+        'svgo': 'commonjs svgo',
       })
     }
     return config
