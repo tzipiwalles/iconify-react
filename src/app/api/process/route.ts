@@ -769,7 +769,7 @@ function scaleIconToFit(svgString: string): string {
   }
   
   // Replace viewBox with 24x24
-  let newSvg = svgString.replace(
+  const newSvg = svgString.replace(
     /viewBox="[\d.\s]+"/, 
     'viewBox="0 0 24 24"'
   )
@@ -1313,7 +1313,6 @@ export async function POST(request: NextRequest) {
       
       if (mode === "icon" && originalWidth && originalHeight) {
         // ICON MODE: Convert to black silhouette on white background
-        const maxSide = Math.max(originalWidth, originalHeight)
         console.log(`[API] Creating silhouette: ${originalWidth}x${originalHeight}`)
         
         // Step 1: Get raw pixel data
