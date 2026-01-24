@@ -99,6 +99,10 @@ export default function Home() {
       const data = await response.json()
 
       if (!response.ok) {
+        // Special handling for rate limit (429)
+        if (response.status === 429) {
+          throw new Error("⏰ Daily limit reached! Come back tomorrow or sign in for unlimited access.")
+        }
         throw new Error(data.error || "Processing failed")
       }
 

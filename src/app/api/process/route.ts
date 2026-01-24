@@ -10,6 +10,61 @@ import path from "path"
 // Cache directory for remove.bg results (persists across dev restarts)
 const CACHE_DIR = path.join(process.cwd(), ".cache", "rmbg")
 
+// Rate limiting storage (in-memory)
+const rateLimitStore = new Map<string, { count: number; date: string }>()
+const MAX_REQUESTS_PER_DAY = 5
+
+// Get client IP address
+function getClientIP(request: NextRequest): string {
+  // Try various headers that might contain the real IP
+  const forwarded = request.headers.get("x-forwarded-for")
+  const realIP = request.headers.get("x-real-ip")
+  const cfConnectingIP = request.headers.get("cf-connecting-ip")
+  
+  if (forwarded) {
+    return forwarded.split(",")[0].trim()
+  }
+  if (realIP) {
+    return realIP
+  }
+  if (cfConnectingIP) {
+    return cfConnectingIP
+  }
+  
+  return "unknown"
+}
+
+// Check rate limit
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
+  const today = new Date().toDateString()
+  const record = rateLimitStore.get(ip)
+  
+  // If no record or it's a new day, reset
+  if (!record || record.date !== today) {
+    rateLimitStore.set(ip, { count: 0, date: today })
+    return { allowed: true, remaining: MAX_REQUESTS_PER_DAY }
+  }
+  
+  // Check if limit exceeded
+  if (record.count >= MAX_REQUESTS_PER_DAY) {
+    return { allowed: false, remaining: 0 }
+  }
+  
+  return { allowed: true, remaining: MAX_REQUESTS_PER_DAY - record.count }
+}
+
+// Increment request count
+function incrementRateLimit(ip: string): void {
+  const today = new Date().toDateString()
+  const record = rateLimitStore.get(ip)
+  
+  if (record && record.date === today) {
+    record.count++
+  } else {
+    rateLimitStore.set(ip, { count: 1, date: today })
+  }
+}
+
 // Ensure cache directory exists
 function ensureCacheDir() {
   if (!fs.existsSync(CACHE_DIR)) {
@@ -1156,6 +1211,28 @@ function generateComponentName(filename: string, customName?: string, mode?: Out
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
+  
+  // Check rate limit first
+  const clientIP = getClientIP(request)
+  const { allowed, remaining } = checkRateLimit(clientIP)
+  
+  if (!allowed) {
+    console.log(`[API] ⛔ Rate limit exceeded for IP: ${clientIP}`)
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: "Daily limit reached. Come back tomorrow!",
+        limitInfo: {
+          maxRequests: MAX_REQUESTS_PER_DAY,
+          remaining: 0
+        }
+      },
+      { status: 429 }
+    )
+  }
+  
+  console.log(`[API] ✅ Rate limit check passed for IP: ${clientIP} (${remaining} remaining today)`)
+  
   try {
     console.log("[API] ========== Starting file processing ==========")
     console.log(`[API] Environment: ${process.env.VERCEL ? 'Vercel' : 'Local'}`)
@@ -1453,6 +1530,9 @@ export async function POST(request: NextRequest) {
     if (totalTime > 8000) {
       console.warn(`[API] ⚠️ WARNING: Processing took ${totalTime}ms - close to Vercel timeout`)
     }
+    
+    // Increment rate limit counter after successful processing
+    incrementRateLimit(clientIP)
     
     return NextResponse.json({
       success: true,
