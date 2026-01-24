@@ -15,18 +15,31 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Asset-Bridge | Image to React Component",
+  title: "Asset-Bridge: Use Your Real Logo in ChatGPT, Claude & AI Artifacts",
   description:
-    "Transform raw images and SVGs into optimized, standardized React components for AI coding workflows. Perfect for icon systems and design systems.",
+    "Stop using placeholder images. Convert your brand assets into hosted React components or direct links usable in ChatGPT presentations, Claude Artifacts, and V0.dev. Free & Open Source.",
   keywords: [
-    "SVG",
-    "React",
-    "Component",
-    "Image converter",
-    "Vectorization",
-    "AI coding",
-    "Design system",
+    "logo in chatgpt",
+    "images in claude artifacts",
+    "svg to react",
+    "host images for ai",
+    "brand assets for llms",
+    "asset bridge",
+    "logo hosting",
+    "react component converter",
   ],
+  openGraph: {
+    title: "Asset-Bridge: Your Brand Assets in AI",
+    description: "Don't let AI hallucinate your logo. Get a direct link for your brand assets instantly.",
+    type: "website",
+    url: "https://asset-bridge-app.vercel.app",
+    siteName: "Asset-Bridge",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Asset-Bridge: Your Brand Assets in AI",
+    description: "Don't let AI hallucinate your logo. Get a direct link for your brand assets instantly.",
+  },
 };
 
 export default function RootLayout({
