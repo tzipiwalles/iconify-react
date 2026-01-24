@@ -595,10 +595,9 @@ async function traceMaskToPath(maskBuffer: Buffer, color: string): Promise<strin
       console.log(`[API] Potrace generated ${pathMatches.length} paths for ${color}`)
       
       // Debug: show first path's d attribute length
-      if (pathMatches.length > 0) {
-        const firstPath = pathMatches[0]
-        const dMatch = firstPath.match(/d="([^"]*)"/)
-        if (dMatch) {
+      if (pathMatches.length > 0 && pathMatches[0]) {
+        const dMatch = pathMatches[0].match(/d="([^"]*)"/)
+        if (dMatch && dMatch[1]) {
           console.log(`[API] First path d length: ${dMatch[1].length} chars`)
         }
       }
