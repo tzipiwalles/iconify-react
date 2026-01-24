@@ -3,6 +3,50 @@ import sharp from "sharp"
 import potrace from "potrace"
 import { optimize } from "svgo"
 import { createClient } from "@/lib/supabase/server"
+import crypto from "crypto"
+import fs from "fs"
+import path from "path"
+
+// Cache directory for remove.bg results (persists across dev restarts)
+const CACHE_DIR = path.join(process.cwd(), ".cache", "rmbg")
+
+// Ensure cache directory exists
+function ensureCacheDir() {
+  if (!fs.existsSync(CACHE_DIR)) {
+    fs.mkdirSync(CACHE_DIR, { recursive: true })
+  }
+}
+
+// Generate hash for image buffer
+function getImageHash(buffer: Buffer): string {
+  return crypto.createHash("md5").update(buffer).digest("hex")
+}
+
+// Get cached result if exists
+function getCachedResult(hash: string): Buffer | null {
+  try {
+    const cachePath = path.join(CACHE_DIR, `${hash}.png`)
+    if (fs.existsSync(cachePath)) {
+      console.log(`[CACHE] ✅ Hit! Using cached result for ${hash.slice(0, 8)}...`)
+      return fs.readFileSync(cachePath)
+    }
+  } catch (error) {
+    console.error("[CACHE] Error reading cache:", error)
+  }
+  return null
+}
+
+// Save result to cache
+function saveToCache(hash: string, buffer: Buffer): void {
+  try {
+    ensureCacheDir()
+    const cachePath = path.join(CACHE_DIR, `${hash}.png`)
+    fs.writeFileSync(cachePath, buffer)
+    console.log(`[CACHE] 💾 Saved result to cache: ${hash.slice(0, 8)}...`)
+  } catch (error) {
+    console.error("[CACHE] Error saving to cache:", error)
+  }
+}
 
 // Type definitions for potrace
 interface PotraceParams {
@@ -45,8 +89,10 @@ const MODE_CONFIG = {
 async function extractDominantColors(buffer: Buffer, colorCount: number, sampleFromCenter: boolean = false): Promise<string[]> {
   try {
     // Resize to small size for faster color analysis
+    // Use ensureAlpha() to preserve transparency, and 'inside' fit to avoid adding background
     const { data, info } = await sharp(buffer)
-      .resize(100, 100, { fit: 'cover' })
+      .ensureAlpha() // Always get RGBA so we can skip transparent pixels
+      .resize(100, 100, { fit: 'inside', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .raw()
       .toBuffer({ resolveWithObject: true })
     
@@ -289,20 +335,74 @@ async function detectBackgroundColor(buffer: Buffer): Promise<{ r: number; g: nu
 }
 
 /**
- * Removes background by making similar colors transparent.
- * If REMOVE_BG_API_KEY is set, calls the remove.bg API instead.
+ * Removes background using remove.bg API (for Logo mode)
+ * Uses file-based caching to save API credits during development
  */
-async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBuffer>> {
-  // Local background removal using sharp
+async function removeBackgroundWithRemoveBg(buffer: Buffer): Promise<Buffer<ArrayBuffer> | null> {
+  const apiKey = process.env.REMOVE_BG_API_KEY
+  
+  if (!apiKey) {
+    console.log("[API] ⚠️ No REMOVE_BG_API_KEY found")
+    return null
+  }
+
+  // Check cache first
+  const imageHash = getImageHash(buffer)
+  const cached = getCachedResult(imageHash)
+  if (cached) {
+    return cached as Buffer<ArrayBuffer>
+  }
+
+  // Call remove.bg API
+  try {
+    console.log("[API] 🚀 Calling remove.bg API...")
+    
+    const formData = new FormData()
+    formData.append("image_file", new Blob([new Uint8Array(buffer)]), "image.png")
+    formData.append("size", "auto")
+
+    const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+      method: "POST",
+      headers: {
+        "X-Api-Key": apiKey,
+      },
+      body: formData,
+    })
+
+    console.log(`[API] 📡 remove.bg response status: ${response.status}`)
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error("[API] ❌ remove.bg API error:", error)
+      return null
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    const resultBuffer = Buffer.from(arrayBuffer) as Buffer<ArrayBuffer>
+    console.log(`[API] ✅ remove.bg SUCCESS! Output: ${resultBuffer.length} bytes`)
+    
+    // Save to cache for future use
+    saveToCache(imageHash, resultBuffer)
+    
+    return resultBuffer
+  } catch (error) {
+    console.error("[API] ❌ remove.bg API call failed:", error)
+    return null
+  }
+}
+
+/**
+ * Removes background using local algorithm (for Icon mode, or fallback)
+ */
+async function removeBackgroundLocal(buffer: Buffer): Promise<Buffer<ArrayBuffer>> {
   console.log("[API] 🔧 Using local background removal...")
   
   try {
-    // Detect background color from corners
+    // Detect background color from entire image
     const bgColor = await detectBackgroundColor(buffer)
     console.log(`[API] Detected BG color: RGB(${bgColor.r}, ${bgColor.g}, ${bgColor.b})`)
     
     // Color distance threshold (0-441, where 441 = max distance in RGB space)
-    // Increased to 80 for better background removal of similar colors
     const threshold = 80
     
     // Get raw pixel data
@@ -322,14 +422,14 @@ async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBu
       const g = data[i + 1]
       const b = data[i + 2]
       
-      // Calculate Euclidean color distance (more accurate than per-channel comparison)
-      const colorDistance = Math.sqrt(
+      // Calculate Euclidean color distance
+      const colorDist = Math.sqrt(
         Math.pow(r - bgColor.r, 2) +
         Math.pow(g - bgColor.g, 2) +
         Math.pow(b - bgColor.b, 2)
       )
       
-      if (colorDistance <= threshold) {
+      if (colorDist <= threshold) {
         // Make transparent
         newData[i + 3] = 0
       }
@@ -352,6 +452,25 @@ async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBu
     console.error("Local background removal error:", error)
     return buffer as Buffer<ArrayBuffer>
   }
+}
+
+/**
+ * Removes background from image
+ * - Logo mode: Uses remove.bg API (with caching) for best quality
+ * - Icon mode: Uses local algorithm (sufficient for silhouette conversion)
+ */
+async function removeBackgroundFromImage(buffer: Buffer, mode: OutputMode): Promise<Buffer<ArrayBuffer>> {
+  if (mode === "logo") {
+    // Try remove.bg first (with caching)
+    const removeBgResult = await removeBackgroundWithRemoveBg(buffer)
+    if (removeBgResult) {
+      return removeBgResult
+    }
+    console.log("[API] ⚠️ Falling back to local removal for logo...")
+  }
+  
+  // Use local removal for icon mode, or as fallback for logo
+  return removeBackgroundLocal(buffer)
 }
 
 /**
@@ -425,8 +544,22 @@ async function createColorMask(
     }
   }
 
-  // Convert to PNG
-  return sharp(maskData, {
+  // Debug: count how many pixels matched
+  const matchCount = maskData.filter(v => v === 255).length
+  const totalPixels = width * height
+  const matchPercent = ((matchCount / totalPixels) * 100).toFixed(1)
+  console.log(`[API] Mask for RGB(${targetColor.r},${targetColor.g},${targetColor.b}): ${matchCount}/${totalPixels} pixels (${matchPercent}%)`)
+
+  // IMPORTANT: Potrace traces DARK pixels on light background
+  // Our mask has white=foreground, black=background
+  // We need to INVERT it so potrace traces the logo, not the background
+  const invertedMask = Buffer.alloc(maskData.length)
+  for (let i = 0; i < maskData.length; i++) {
+    invertedMask[i] = 255 - maskData[i]
+  }
+
+  // Convert to PNG (with inverted mask)
+  return sharp(invertedMask, {
     raw: { width, height, channels: 1 }
   }).png().toBuffer()
 }
@@ -459,6 +592,17 @@ async function traceMaskToPath(maskBuffer: Buffer, color: string): Promise<strin
       
       // Extract just the path element(s) from the SVG (skip rect if exists)
       const pathMatches = svg.match(/<path[^>]*\/>/gi) || []
+      console.log(`[API] Potrace generated ${pathMatches.length} paths for ${color}`)
+      
+      // Debug: show first path's d attribute length
+      if (pathMatches.length > 0) {
+        const firstPath = pathMatches[0]
+        const dMatch = firstPath.match(/d="([^"]*)"/)
+        if (dMatch) {
+          console.log(`[API] First path d length: ${dMatch[1].length} chars`)
+        }
+      }
+      
       resolve(pathMatches.join('\n'))
     })
   })
@@ -1112,8 +1256,8 @@ export async function POST(request: NextRequest) {
       
       // Step 2: Background removal (if requested)
       if (shouldRemoveBackground) {
-        console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Starting background removal...`)
-        const noBgBuffer = await removeBackgroundFromImage(buffer)
+        console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Starting background removal (${mode} mode)...`)
+        const noBgBuffer = await removeBackgroundFromImage(buffer, mode)
         
         // Check if remove.bg changed the dimensions (cropped)
         const noBgMeta = await sharp(noBgBuffer).metadata()
@@ -1230,11 +1374,13 @@ export async function POST(request: NextRequest) {
         // LOGO MODE: Simple resize only (no silhouette conversion)
         console.log(`[API] Logo mode: simple resize`)
         
-        // Just resize, preserve aspect ratio
+        // Resize with transparent background preserved
         processedBuffer = await sharp(buffer)
+          .ensureAlpha() // Ensure we have alpha channel
           .resize(targetSize, targetSize, {
             fit: 'inside',
-            withoutEnlargement: true
+            withoutEnlargement: true,
+            background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
           })
           .png()
           .toBuffer()
