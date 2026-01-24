@@ -24,17 +24,31 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [result, setResult] = useState<ProcessedResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
+  
+  const MIN_FILE_SIZE = 10000 // 10KB minimum for good quality
+  const RECOMMENDED_FILE_SIZE = 50000 // 50KB recommended
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
     setResult(null)
     setError(null)
+    
+    // Check file size and warn if too small
+    if (file.size < MIN_FILE_SIZE) {
+      setWarning(`⚠️ Image is very small (${Math.round(file.size / 1000)}KB). For best results, use images larger than 50KB. Small images may lose detail and colors.`)
+    } else if (file.size < RECOMMENDED_FILE_SIZE) {
+      setWarning(`💡 Image is ${Math.round(file.size / 1000)}KB. For better color accuracy in Logo mode, we recommend images larger than 50KB.`)
+    } else {
+      setWarning(null)
+    }
   }
 
   const handleClear = () => {
     setSelectedFile(null)
     setResult(null)
     setError(null)
+    setWarning(null)
     setComponentName("")
   }
 
@@ -147,6 +161,12 @@ export default function Home() {
               </div>
             )}
 
+            {warning && !error && (
+              <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-200">
+                {warning}
+              </div>
+            )}
+
             <ResultsPanel result={result} />
           </div>
 
@@ -250,7 +270,7 @@ export default function Home() {
                       <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-500" />
                       <span>
                         <strong className="font-medium text-foreground">Colors:</strong>{" "}
-                        Up to 6 auto-optimized
+                        Up to 4 auto-optimized
                       </span>
                     </li>
                     <li className="flex items-start gap-2.5">

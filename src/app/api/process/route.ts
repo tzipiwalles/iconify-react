@@ -30,7 +30,7 @@ const MODE_CONFIG = {
     description: "Standard Icon - single color, themeable"
   },
   logo: {
-    colorCount: 6,
+    colorCount: 4, // Max 4 for potrace performance (5+ is very slow)
     useCurrentColor: false,
     viewBox: "preserve", // Will preserve original aspect ratio
     description: "Brand Logo - original colors, auto-optimized"
@@ -77,6 +77,15 @@ async function extractDominantColors(buffer: Buffer, colorCount: number, sampleF
         
         // Skip near-white pixels (likely light background)
         if (r > 240 && g > 240 && b > 240) continue
+        
+        // Skip very dark/black pixels (likely shadows or dark background)
+        if (r < 15 && g < 15 && b < 15) continue
+        
+        // Skip near-gray pixels (low saturation, not distinctive)
+        const maxChannel = Math.max(r, g, b)
+        const minChannel = Math.min(r, g, b)
+        const saturation = maxChannel > 0 ? (maxChannel - minChannel) / maxChannel : 0
+        if (saturation < 0.15 && maxChannel > 50 && maxChannel < 200) continue // Skip grayish pixels
         
         pixels.push({ r, g, b })
       }
@@ -125,16 +134,50 @@ function kMeansClustering(
   pixels: { r: number; g: number; b: number }[],
   k: number
 ): { r: number; g: number; b: number }[] {
-  // Initialize cluster centers with random pixels
+  if (pixels.length === 0) return []
+  if (pixels.length <= k) return pixels
+  
+  // K-means++ initialization: select diverse starting points
   const centers: { r: number; g: number; b: number }[] = []
-  const step = Math.floor(pixels.length / k)
-  for (let i = 0; i < k; i++) {
-    const pixel = pixels[Math.min(i * step, pixels.length - 1)]
-    centers.push({ ...pixel })
+  
+  // First center: random pixel
+  centers.push({ ...pixels[Math.floor(Math.random() * pixels.length)] })
+  
+  // Remaining centers: select pixels far from existing centers
+  while (centers.length < k) {
+    const distances: number[] = []
+    let totalDist = 0
+    
+    for (const pixel of pixels) {
+      // Find minimum distance to any existing center
+      let minDist = Infinity
+      for (const center of centers) {
+        const dist = colorDistance(pixel, center)
+        if (dist < minDist) minDist = dist
+      }
+      distances.push(minDist * minDist) // Square for weighted probability
+      totalDist += minDist * minDist
+    }
+    
+    // Select next center with probability proportional to distance squared
+    let threshold = Math.random() * totalDist
+    for (let i = 0; i < pixels.length; i++) {
+      threshold -= distances[i]
+      if (threshold <= 0) {
+        centers.push({ ...pixels[i] })
+        break
+      }
+    }
+    
+    // Fallback if no center was added
+    if (centers.length < k && distances.length > 0) {
+      const maxDistIdx = distances.indexOf(Math.max(...distances))
+      centers.push({ ...pixels[maxDistIdx] })
+    }
   }
   
-  // Run k-means iterations
-  for (let iter = 0; iter < 10; iter++) {
+  // Run k-means iterations (more iterations for better convergence)
+  for (let iter = 0; iter < 20; iter++) {
     // Assign pixels to nearest cluster
     const clusters: { r: number; g: number; b: number }[][] = Array.from({ length: k }, () => [])
     
@@ -170,6 +213,13 @@ function kMeansClustering(
     }
   }
   
+  // Sort centers by saturation/vibrancy (most saturated first)
+  centers.sort((a, b) => {
+    const satA = Math.max(a.r, a.g, a.b) - Math.min(a.r, a.g, a.b)
+    const satB = Math.max(b.r, b.g, b.b) - Math.min(b.r, b.g, b.b)
+    return satB - satA
+  })
+  
   return centers
 }
 
@@ -188,7 +238,8 @@ function colorDistance(
 }
 
 /**
- * Detects the dominant background color by sampling corner pixels
+ * Detects the dominant background color by sampling pixels from the entire image
+ * Background is assumed to be the most common color
  */
 async function detectBackgroundColor(buffer: Buffer): Promise<{ r: number; g: number; b: number }> {
   const { data, info } = await sharp(buffer)
@@ -196,44 +247,33 @@ async function detectBackgroundColor(buffer: Buffer): Promise<{ r: number; g: nu
     .toBuffer({ resolveWithObject: true })
 
   const { width, height, channels } = info
-  const samplePositions = [
-    [0, 0], // top-left
-    [width - 1, 0], // top-right
-    [0, height - 1], // bottom-left
-    [width - 1, height - 1], // bottom-right
-    [Math.floor(width / 2), 0], // top-center
-    [Math.floor(width / 2), height - 1], // bottom-center
-  ]
-
-  const colors: { r: number; g: number; b: number }[] = []
   
-  for (const [x, y] of samplePositions) {
-    const idx = (y * width + x) * channels
-    colors.push({
-      r: data[idx],
-      g: data[idx + 1],
-      b: data[idx + 2],
-    })
-  }
-
-  // Find most common color (simple mode)
+  // Sample every Nth pixel to build a histogram (faster than all pixels)
+  const sampleStep = Math.max(1, Math.floor(Math.sqrt(width * height) / 50)) // ~2500 samples
   const colorCounts = new Map<string, { color: { r: number; g: number; b: number }; count: number }>()
   
-  for (const color of colors) {
-    // Round to reduce variations
-    const key = `${Math.round(color.r / 10) * 10},${Math.round(color.g / 10) * 10},${Math.round(color.b / 10) * 10}`
-    const existing = colorCounts.get(key)
-    if (existing) {
-      existing.count++
-    } else {
-      colorCounts.set(key, { color, count: 1 })
+  for (let y = 0; y < height; y += sampleStep) {
+    for (let x = 0; x < width; x += sampleStep) {
+      const idx = (y * width + x) * channels
+      const r = data[idx]
+      const g = data[idx + 1]
+      const b = data[idx + 2]
+      
+      // Round to buckets of 20 to group similar colors
+      const key = `${Math.round(r / 20) * 20},${Math.round(g / 20) * 20},${Math.round(b / 20) * 20}`
+      const existing = colorCounts.get(key)
+      if (existing) {
+        existing.count++
+      } else {
+        colorCounts.set(key, { color: { r, g, b }, count: 1 })
+      }
     }
   }
 
+  // Find the most common color (likely the background)
   let maxCount = 0
   let bgColor = { r: 255, g: 255, b: 255 } // default white
   
-  // Convert iterator to array for ES5 compatibility
   const colorEntries = Array.from(colorCounts.values())
   for (const { color, count } of colorEntries) {
     if (count > maxCount) {
@@ -242,7 +282,9 @@ async function detectBackgroundColor(buffer: Buffer): Promise<{ r: number; g: nu
     }
   }
 
-  console.log(`[API] Detected background color: rgb(${bgColor.r}, ${bgColor.g}, ${bgColor.b})`)
+  const totalSamples = colorEntries.reduce((sum, entry) => sum + entry.count, 0)
+  const percentage = ((maxCount / totalSamples) * 100).toFixed(1)
+  console.log(`[API] Detected background color: RGB(${bgColor.r}, ${bgColor.g}, ${bgColor.b}) - ${percentage}% of image`)
   return bgColor
 }
 
@@ -251,52 +293,17 @@ async function detectBackgroundColor(buffer: Buffer): Promise<{ r: number; g: nu
  * If REMOVE_BG_API_KEY is set, calls the remove.bg API instead.
  */
 async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBuffer>> {
-  const apiKey = process.env.REMOVE_BG_API_KEY
-
-  console.log(`[API] 🔍 Checking remove.bg API key... ${apiKey ? '✅ FOUND' : '❌ NOT FOUND'}`)
-
-  // If API key is available, use remove.bg for better results
-  if (apiKey) {
-    try {
-      console.log("[API] 🚀 Using remove.bg API for background removal...")
-      const formData = new FormData()
-      formData.append("image_file", new Blob([new Uint8Array(buffer)]), "image.png")
-      formData.append("size", "auto")
-
-      const response = await fetch("https://api.remove.bg/v1.0/removebg", {
-        method: "POST",
-        headers: {
-          "X-Api-Key": apiKey,
-        },
-        body: formData,
-      })
-
-      console.log(`[API] 📡 remove.bg response status: ${response.status}`)
-
-      if (!response.ok) {
-        const error = await response.text()
-        console.error("[API] ❌ remove.bg API error:", error)
-        throw new Error(`Background removal failed: ${response.status}`)
-      }
-
-      const arrayBuffer = await response.arrayBuffer()
-      const resultBuffer = Buffer.from(arrayBuffer) as Buffer<ArrayBuffer>
-      console.log(`[API] ✅ remove.bg SUCCESS! Output buffer size: ${resultBuffer.length} bytes`)
-      return resultBuffer
-    } catch (error) {
-      console.error("[API] ⚠️ remove.bg API error, falling back to local removal:", error)
-    }
-  }
-
   // Local background removal using sharp
   console.log("[API] 🔧 Using local background removal...")
   
   try {
     // Detect background color from corners
     const bgColor = await detectBackgroundColor(buffer)
+    console.log(`[API] Detected BG color: RGB(${bgColor.r}, ${bgColor.g}, ${bgColor.b})`)
     
-    // Tolerance for color matching (0-255)
-    const tolerance = 30
+    // Color distance threshold (0-441, where 441 = max distance in RGB space)
+    // Increased to 80 for better background removal of similar colors
+    const threshold = 80
     
     // Get raw pixel data
     const { data, info } = await sharp(buffer)
@@ -315,12 +322,14 @@ async function removeBackgroundFromImage(buffer: Buffer): Promise<Buffer<ArrayBu
       const g = data[i + 1]
       const b = data[i + 2]
       
-      // Check if pixel is similar to background color
-      const diffR = Math.abs(r - bgColor.r)
-      const diffG = Math.abs(g - bgColor.g)
-      const diffB = Math.abs(b - bgColor.b)
+      // Calculate Euclidean color distance (more accurate than per-channel comparison)
+      const colorDistance = Math.sqrt(
+        Math.pow(r - bgColor.r, 2) +
+        Math.pow(g - bgColor.g, 2) +
+        Math.pow(b - bgColor.b, 2)
+      )
       
-      if (diffR <= tolerance && diffG <= tolerance && diffB <= tolerance) {
+      if (colorDistance <= threshold) {
         // Make transparent
         newData[i + 3] = 0
       }
@@ -355,8 +364,8 @@ async function traceToSvg(buffer: Buffer): Promise<string> {
         threshold: 128,
         color: "currentColor",
         background: "transparent",
-        turdSize: 4,
-        optTolerance: 0.1,
+        turdSize: 2,       // Lower = more detail preserved
+        optTolerance: 0.2, // Slightly smoother curves
       }
 
       potrace.trace(buffer, params, (err: Error | null, svg: string) => {
@@ -375,18 +384,152 @@ async function traceToSvg(buffer: Buffer): Promise<string> {
 }
 
 /**
+ * Creates a color mask - pixels matching the target color become white, others black
+ */
+async function createColorMask(
+  buffer: Buffer, 
+  targetColor: { r: number; g: number; b: number },
+  tolerance: number = 50
+): Promise<Buffer> {
+  const { data, info } = await sharp(buffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const { width, height } = info
+  const channels = 4 // RGBA
+  
+  // Create grayscale mask buffer
+  const maskData = Buffer.alloc(width * height)
+  
+  for (let i = 0; i < data.length; i += channels) {
+    const r = data[i]
+    const g = data[i + 1]
+    const b = data[i + 2]
+    const a = data[i + 3]
+    
+    // Check if pixel matches target color within tolerance
+    const diffR = Math.abs(r - targetColor.r)
+    const diffG = Math.abs(g - targetColor.g)
+    const diffB = Math.abs(b - targetColor.b)
+    
+    const pixelIndex = i / channels
+    
+    // If transparent or matches color, mark as white (foreground)
+    if (a < 128) {
+      maskData[pixelIndex] = 0 // Transparent = black (background)
+    } else if (diffR <= tolerance && diffG <= tolerance && diffB <= tolerance) {
+      maskData[pixelIndex] = 255 // Match = white (foreground)
+    } else {
+      maskData[pixelIndex] = 0 // No match = black (background)
+    }
+  }
+
+  // Convert to PNG
+  return sharp(maskData, {
+    raw: { width, height, channels: 1 }
+  }).png().toBuffer()
+}
+
+/**
+ * Traces a single color mask with potrace and returns SVG path
+ */
+async function traceMaskToPath(maskBuffer: Buffer, color: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const params: PotraceParams = {
+      threshold: 128,
+      color: color,
+      background: "transparent",
+      turdSize: 2,
+      optTolerance: 0.2,
+    }
+
+    potrace.trace(maskBuffer, params, (err: Error | null, svg: string) => {
+      if (err) {
+        console.error("Potrace trace error:", err)
+        reject(err)
+        return
+      }
+      
+      // Check if potrace added a background rect/path
+      const hasRect = svg.includes('<rect')
+      if (hasRect) {
+        console.log(`[API] ⚠️ Potrace added <rect> background for color ${color}`)
+      }
+      
+      // Extract just the path element(s) from the SVG (skip rect if exists)
+      const pathMatches = svg.match(/<path[^>]*\/>/gi) || []
+      resolve(pathMatches.join('\n'))
+    })
+  })
+}
+
+/**
+ * Converts a raster image to multi-color SVG using color-based segmentation
+ * This creates separate masks for each detected color and traces them individually
+ */
+async function colorSegmentToSvg(
+  buffer: Buffer, 
+  detectedColors: string[]
+): Promise<string> {
+  console.log("[API] Using color-based segmentation for accurate colors...")
+  
+  // Get image dimensions
+  const metadata = await sharp(buffer).metadata()
+  const width = metadata.width || 100
+  const height = metadata.height || 100
+  
+  // Convert hex colors to RGB
+  const rgbColors = detectedColors.map(hex => {
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return { hex, r, g, b }
+  })
+  
+  console.log(`[API] Processing ${rgbColors.length} color layers...`)
+  
+  // Create mask and trace for each color
+  const pathsPromises = rgbColors.map(async (color, index) => {
+    console.log(`[API] Layer ${index + 1}/${rgbColors.length}: ${color.hex}`)
+    
+    try {
+      const mask = await createColorMask(buffer, color, 60) // Tolerance of 60
+      const paths = await traceMaskToPath(mask, color.hex)
+      return paths
+    } catch (error) {
+      console.error(`[API] Error processing layer ${color.hex}:`, error)
+      return ''
+    }
+  })
+  
+  const allPaths = await Promise.all(pathsPromises)
+  const validPaths = allPaths.filter(p => p.length > 0)
+  
+  console.log(`[API] Generated ${validPaths.length} color layers`)
+  
+  // Combine into single SVG with explicit transparency
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+${validPaths.join('\n')}
+</svg>`
+  
+  return svg
+}
+
+/**
  * Converts a raster image buffer to multi-color SVG using potrace posterize
+ * DEPRECATED: Use colorSegmentToSvg for better color accuracy
  */
 async function posterizeToSvg(buffer: Buffer, colorCount: number): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        steps: colorCount,
+        steps: Math.min(colorCount, 5),
         fillStrategy: "dominant",
         rangeDistribution: "auto",
         background: "transparent",
-        turdSize: 4,
-        optTolerance: 0.1,
+        turdSize: 2,
+        optTolerance: 0.2,
       }
 
       potrace.posterize(buffer, params, (err: Error | null, svg: string) => {
@@ -410,24 +553,32 @@ async function posterizeToSvg(buffer: Buffer, colorCount: number): Promise<strin
 function removeBackgroundPath(svgString: string): string {
   console.log("[API] Removing background path from SVG...")
   
-  const viewBoxMatch = svgString.match(/viewBox="(\d+)\s+(\d+)\s+(\d+)\s+(\d+)"/)
+  // First, remove any <rect> elements (background fills)
+  let result = svgString.replace(/<rect[^>]*\/?>(?:<\/rect>)?/gi, () => {
+    console.log("[API] Removed <rect> background element")
+    return ''
+  })
+  
+  const viewBoxMatch = result.match(/viewBox="(\d+)\s+(\d+)\s+(\d+)\s+(\d+)"/)
   const vbWidth = viewBoxMatch ? parseInt(viewBoxMatch[3]) : 0
   const vbHeight = viewBoxMatch ? parseInt(viewBoxMatch[4]) : 0
   
   let removedCount = 0
   let keptCount = 0
   
-  const result = svgString.replace(/<path\s+([^>]*?)(?:\/?>|>[\s\S]*?<\/path>)/gi, (match, attrs) => {
+  result = result.replace(/<path\s+([^>]*?)(?:\/?>|>[\s\S]*?<\/path>)/gi, (match, attrs) => {
     const dMatch = attrs.match(/d="([^"]*)"/)
     if (dMatch) {
       const d = dMatch[1]
       
-      const startsAtOrigin = /^M\s*0\s+/.test(d) || /^M\s*0\s*,/.test(d)
+      // Check if path starts at origin and covers full viewBox
+      const startsAtOrigin = /^M\s*0[\s,]+/.test(d)
       const containsFullWidth = d.includes(`${vbWidth}`) || d.includes(`${vbWidth - 1}`)
       const containsFullHeight = d.includes(`${vbHeight}`) || d.includes(`${vbHeight - 1}`)
       const isLikelyBackground = startsAtOrigin && containsFullWidth && containsFullHeight
       
-      const isFullRect = /^M\s*0\s+[\d.]+V[\d.]+/.test(d) && containsFullWidth
+      // Check if it's a full rectangle path (M 0 0 V height H width V 0 Z)
+      const isFullRect = /^M\s*0[\s,]+[\d.]+[VH]/.test(d) && (containsFullWidth || containsFullHeight)
       
       if (isLikelyBackground || isFullRect) {
         console.log("[API] Removed background path (covers full viewBox)")
@@ -445,80 +596,130 @@ function removeBackgroundPath(svgString: string): string {
 }
 
 /**
+ * Scales SVG content to fit within 24x24 viewBox
+ * Since the image was squared before potrace, this is a simple scale operation
+ */
+function scaleIconToFit(svgString: string): string {
+  // Extract the current viewBox from the SVG (created by potrace)
+  const viewBoxMatch = svgString.match(/viewBox="([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)"/)
+  
+  if (!viewBoxMatch) {
+    console.log("[API] No viewBox found in SVG, skipping scale")
+    return svgString
+  }
+  
+  const vbWidth = parseFloat(viewBoxMatch[3])
+  const vbHeight = parseFloat(viewBoxMatch[4])
+  
+  console.log(`[API] Potrace viewBox: ${vbWidth}x${vbHeight}`)
+  
+  // Calculate scale factor (e.g., 512 → 24 = scale of 0.046875)
+  const scale = 24 / Math.max(vbWidth, vbHeight)
+  console.log(`[API] Scale factor: ${scale}`)
+  
+  // Find SVG opening and closing tags
+  const svgOpenMatch = svgString.match(/<svg[^>]*>/)
+  if (!svgOpenMatch) {
+    console.log("[API] Could not find SVG opening tag")
+    return svgString
+  }
+  
+  // Replace viewBox with 24x24
+  let newSvg = svgString.replace(
+    /viewBox="[\d.\s]+"/, 
+    'viewBox="0 0 24 24"'
+  )
+  
+  // Extract content between svg tags
+  const openTag = newSvg.match(/<svg[^>]*>/)![0]
+  const openTagEnd = newSvg.indexOf(openTag) + openTag.length
+  const closeTagStart = newSvg.lastIndexOf('</svg>')
+  const content = newSvg.substring(openTagEnd, closeTagStart)
+  
+  // Wrap content in a group with scale transform
+  const scaledContent = `<g transform="scale(${scale})">${content}</g>`
+  
+  const result = openTag + scaledContent + '</svg>'
+  console.log(`[API] Added scale transform: scale(${scale})`)
+  
+  return result
+}
+
+/**
  * Replaces colors in SVG with custom brand colors
- * Maps colors by brightness: dark potrace colors → dark custom colors
+ * Strategy: 
+ * - Separate "white/light" colors (brightness > 180) to preserve them
+ * - Distribute remaining vibrant colors evenly across paths
  */
 function applyCustomColors(svgString: string, customColors: string[]): string {
   console.log("[API] Applying brand colors to SVG...")
   console.log("[API] Colors to apply:", customColors.join(", "))
   
-  let result = svgString
-  let replacedCount = 0
-  let preservedCount = 0
+  // Separate light colors (white/cream) from vibrant colors
+  const WHITE_THRESHOLD = 180
+  const lightColors = customColors.filter(c => getColorBrightness(c) > WHITE_THRESHOLD)
+  const vibrantColors = customColors.filter(c => getColorBrightness(c) <= WHITE_THRESHOLD)
   
-  // Replace fills in path elements
-  result = result.replace(/<path\s+([^>]*?)(\/?>)/gi, (match, attrs, ending) => {
-    const fillMatch = attrs.match(/fill\s*=\s*["']([^"']*)["']/i)
-    
-    if (fillMatch) {
-      const existingColor = fillMatch[1]
-      const brightness = getColorBrightness(existingColor)
-      
-      // Preserve very bright (white) or very dark (black) colors - likely text
-      if (brightness > 220 || brightness < 20) {
-        console.log(`[API] Preserving: ${existingColor} (brightness: ${brightness})`)
-        preservedCount++
-        return match
-      }
-      
-      // Map grayscale brightness to custom color
-      const colorIndex = Math.floor((brightness / 255) * customColors.length)
-      const mappedIndex = Math.min(colorIndex, customColors.length - 1)
-      const newColor = customColors[mappedIndex]
-      
-      const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
-      console.log(`[API] Mapping: ${existingColor} → ${newColor}`)
-      replacedCount++
-      return `<path ${cleanAttrs} fill="${newColor}"${ending}`
-    }
-    
-    const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
-    replacedCount++
-    return `<path ${cleanAttrs} fill="${customColors[0]}"${ending}`
-  })
+  console.log(`[API] Light colors (preserved): ${lightColors.join(", ") || "none"}`)
+  console.log(`[API] Vibrant colors: ${vibrantColors.join(", ")}`)
   
-  // Also handle rect, circle, polygon, ellipse
-  const shapes = ['rect', 'circle', 'polygon', 'ellipse']
-  for (const shape of shapes) {
-    const regex = new RegExp(`<${shape}\\s+([^>]*?)(\\/?>)`, 'gi')
-    result = result.replace(regex, (match, attrs, ending) => {
-      const fillMatch = attrs.match(/fill\s*=\s*["']([^"']*)["']/i)
-      
-      if (fillMatch) {
-        const existingColor = fillMatch[1]
-        const brightness = getColorBrightness(existingColor)
-        
-        if (brightness > 220 || brightness < 20) {
-          preservedCount++
-          return match
-        }
-        
-        const colorIndex = Math.floor((brightness / 255) * customColors.length)
-        const mappedIndex = Math.min(colorIndex, customColors.length - 1)
-        const newColor = customColors[mappedIndex]
-        
-        const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
-        replacedCount++
-        return `<${shape} ${cleanAttrs} fill="${newColor}"${ending}`
-      }
-      
-      const cleanAttrs = attrs.replace(/\s*fill\s*=\s*["'][^"']*["']/gi, '')
-      replacedCount++
-      return `<${shape} ${cleanAttrs} fill="${customColors[0]}"${ending}`
-    })
+  // Count all paths first
+  const pathMatches = svgString.match(/<path[^>]*\/?>/gi) || []
+  const pathCount = pathMatches.length
+  console.log(`[API] Found ${pathCount} paths in SVG`)
+  
+  if (pathCount === 0) {
+    console.log("[API] No paths found, returning original")
+    return svgString
   }
   
-  console.log(`[API] ✅ Applied ${replacedCount} colors, preserved ${preservedCount} text elements`)
+  // If we have no vibrant colors, use the original colors
+  const colorsToApply = vibrantColors.length > 0 ? vibrantColors : customColors
+  
+  // Sort vibrant colors by brightness (darkest first)
+  const sortedColors = [...colorsToApply].sort((a, b) => {
+    return getColorBrightness(a) - getColorBrightness(b)
+  })
+  console.log("[API] Sorted vibrant colors (dark→light):", sortedColors.join(", "))
+  
+  // Determine how many paths should be "light" (white text)
+  // If we detected light colors, assume ~25% of paths might be text
+  const lightPathCount = lightColors.length > 0 ? Math.ceil(pathCount * 0.25) : 0
+  const vibrantPathCount = pathCount - lightPathCount
+  
+  // Replace each path with a color from the palette
+  let pathIndex = 0
+  const result = svgString.replace(/<path\s+([^>]*?)\s*(\/?>)/gi, (match, attrs, ending) => {
+    // Remove any existing fill attribute and clean up whitespace
+    let cleanAttrs = attrs.replace(/fill\s*=\s*["'][^"']*["']/gi, '')
+    cleanAttrs = cleanAttrs.replace(/\s+/g, ' ').trim()
+    
+    let assignedColor: string
+    
+    // Last paths get the light color (text is usually at the bottom/end)
+    if (lightColors.length > 0 && pathIndex >= vibrantPathCount) {
+      assignedColor = lightColors[0] // Use the detected light color
+      console.log(`[API] Path ${pathIndex + 1}/${pathCount} → ${assignedColor} (light/text)`)
+    } else {
+      // Distribute vibrant colors evenly
+      const colorIndex = vibrantPathCount > 0 
+        ? Math.floor((pathIndex / vibrantPathCount) * sortedColors.length)
+        : 0
+      assignedColor = sortedColors[Math.min(colorIndex, sortedColors.length - 1)]
+      console.log(`[API] Path ${pathIndex + 1}/${pathCount} → ${assignedColor}`)
+    }
+    
+    pathIndex++
+    
+    // Build clean path element
+    if (cleanAttrs) {
+      return `<path ${cleanAttrs} fill="${assignedColor}"${ending}`
+    } else {
+      return `<path fill="${assignedColor}"${ending}`
+    }
+  })
+  
+  console.log(`[API] ✅ Applied colors to ${pathIndex} paths`)
   return result
 }
 
@@ -588,7 +789,8 @@ function optimizeSvg(
 
   // Set viewBox based on mode
   if (mode === "icon") {
-    // Icon mode: force 24x24 viewBox
+    // Icon mode: always 24x24 viewBox
+    // Content will be scaled to fit (handled in scaleIconToFit function)
     plugins.push({
       name: "addAttributesToSVGElement",
       params: {
@@ -821,13 +1023,18 @@ export async function POST(request: NextRequest) {
     const shouldRemoveBackground = formData.get("removeBackground") === "true"
     const customComponentName = formData.get("componentName") as string | null
     
-    // Get mode configuration
+    // Get mode configuration, but allow override from debug page
     const modeConfig = MODE_CONFIG[mode]
-    const colorCount = modeConfig.colorCount
+    const customColorCount = formData.get("colorCount")
+    // Use custom colorCount if provided (debug mode), otherwise use mode default
+    // Limit to max 4 for performance (potrace struggles with 5+)
+    const colorCount = customColorCount 
+      ? Math.min(parseInt(customColorCount as string) || modeConfig.colorCount, 4)
+      : Math.min(modeConfig.colorCount, 4)
     
     console.log(`[API] Mode: ${mode} (${modeConfig.description})`)
     console.log(`[API] Remove background: ${shouldRemoveBackground}`)
-    console.log(`[API] Color count: ${colorCount}`)
+    console.log(`[API] Color count: ${colorCount} (custom: ${customColorCount || 'no'})`)
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
@@ -873,15 +1080,77 @@ export async function POST(request: NextRequest) {
     ) {
       console.log("[API] Processing as raster image...")
 
-      // Get original dimensions for logo mode
+      // Get dimensions and check for transparency
       const metadata = await sharp(buffer).metadata()
       originalWidth = metadata.width
       originalHeight = metadata.height
-
+      console.log(`[API] Original image dimensions: ${originalWidth}x${originalHeight}`)
+      
+      // Check if PNG has alpha channel (transparency)
+      if (fileType === "image/png" && metadata.channels === 4 && !shouldRemoveBackground) {
+        // Check if image actually uses transparency
+        const { data } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true })
+        let hasTransparency = false
+        for (let i = 3; i < data.length; i += 4) {
+          if (data[i] < 250) { // Alpha < 250 means some transparency
+            hasTransparency = true
+            break
+          }
+        }
+        
+        if (hasTransparency) {
+          console.log("[API] ⚠️ Image has transparent background - not fully supported yet")
+          return NextResponse.json(
+            { 
+              error: "Transparent backgrounds are not fully supported yet. Please upload an image with a solid background (white recommended), or enable 'Remove Background' option.",
+              errorType: "TRANSPARENT_NOT_SUPPORTED"
+            },
+            { status: 400 }
+          )
+        }
+      }
+      
       // Step 2: Background removal (if requested)
       if (shouldRemoveBackground) {
         console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Starting background removal...`)
-        buffer = await removeBackgroundFromImage(buffer)
+        const noBgBuffer = await removeBackgroundFromImage(buffer)
+        
+        // Check if remove.bg changed the dimensions (cropped)
+        const noBgMeta = await sharp(noBgBuffer).metadata()
+        console.log(`[API] After remove.bg: ${noBgMeta.width}x${noBgMeta.height}`)
+        
+        if (noBgMeta.width !== originalWidth || noBgMeta.height !== originalHeight) {
+          // remove.bg cropped the image - composite it back onto original size canvas
+          console.log(`[API] Restoring original dimensions with transparent background...`)
+          buffer = await sharp({
+            create: {
+              width: originalWidth!,
+              height: originalHeight!,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0 }
+            }
+          })
+          .composite([{
+            input: noBgBuffer,
+            gravity: 'center'
+          }])
+          .png()
+          .toBuffer()
+        } else {
+          buffer = noBgBuffer
+        }
+        
+        // For logo mode, trim transparent/white areas after background removal
+        if (mode === "logo") {
+          const beforeTrim = await sharp(buffer).metadata()
+          buffer = await sharp(buffer)
+            .trim({ threshold: 10 }) // Remove transparent/white borders
+            .png()
+            .toBuffer()
+          const afterTrim = await sharp(buffer).metadata()
+          console.log(`[API] Trimmed logo: ${beforeTrim.width}x${beforeTrim.height} → ${afterTrim.width}x${afterTrim.height}`)
+        }
+        
         console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Background removal complete`)
       }
       
@@ -892,32 +1161,101 @@ export async function POST(request: NextRequest) {
         console.log(`[API] Detected ${detectedColors.length} colors: ${detectedColors.join(", ")}`)
       }
 
-      // Step 4: Resize for processing
-      console.log("[API] Resizing image for vectorization...")
-      const maxDimension = 1024
+      // Step 4: Resize and SQUARE the image for processing
+      console.log("[API] Preparing image for vectorization...")
+      const targetSize = 512 // Square size for processing
       
-      let sharpInstance = sharp(buffer)
+      let processedBuffer: Buffer
       
-      if (metadata.width && metadata.height) {
-        const maxSide = Math.max(metadata.width, metadata.height)
-        if (maxSide > maxDimension) {
-          console.log(`[API] Resizing from ${metadata.width}x${metadata.height} to max ${maxDimension}px`)
-          sharpInstance = sharpInstance.resize(maxDimension, maxDimension, {
+      if (mode === "icon" && originalWidth && originalHeight) {
+        // ICON MODE: Convert to black silhouette on white background
+        const maxSide = Math.max(originalWidth, originalHeight)
+        console.log(`[API] Creating silhouette: ${originalWidth}x${originalHeight}`)
+        
+        // Step 1: Get raw pixel data
+        const { data, info } = await sharp(buffer)
+          .flatten({ background: { r: 255, g: 255, b: 255 } })
+          .raw()
+          .toBuffer({ resolveWithObject: true })
+        
+        // Step 2: Convert to black/white silhouette
+        // Any pixel that's not nearly white (r,g,b all > 250) becomes black
+        const silhouetteData = Buffer.alloc(data.length)
+        for (let i = 0; i < data.length; i += info.channels) {
+          const r = data[i]
+          const g = data[i + 1]
+          const b = data[i + 2]
+          
+          // If pixel is nearly white, keep it white; otherwise make it black
+          const isWhite = r > 250 && g > 250 && b > 250
+          const value = isWhite ? 255 : 0
+          
+          silhouetteData[i] = value     // R
+          silhouetteData[i + 1] = value // G
+          silhouetteData[i + 2] = value // B
+          if (info.channels === 4) {
+            silhouetteData[i + 3] = 255 // A (fully opaque)
+          }
+        }
+        
+        // Step 3: Convert raw data to PNG first
+        const silhouettePng = await sharp(silhouetteData, {
+          raw: {
+            width: info.width,
+            height: info.height,
+            channels: info.channels
+          }
+        }).png().toBuffer()
+        
+        // Trim whitespace around the content
+        const trimmedBuffer = await sharp(silhouettePng)
+          .trim({ background: '#FFFFFF', threshold: 10 })
+          .png()
+          .toBuffer()
+        
+        const trimmedMeta = await sharp(trimmedBuffer).metadata()
+        console.log(`[API] After trim: ${trimmedMeta.width}x${trimmedMeta.height}`)
+        
+        // Now resize to fill the square (content will take up most of the space)
+        processedBuffer = await sharp(trimmedBuffer)
+          .resize(targetSize, targetSize, {
+            fit: 'contain',
+            background: { r: 255, g: 255, b: 255 }
+          })
+          .png()
+          .toBuffer()
+        
+        console.log(`[API] Silhouette trimmed and squared to ${targetSize}x${targetSize}`)
+      } else {
+        // LOGO MODE: Simple resize only (no silhouette conversion)
+        console.log(`[API] Logo mode: simple resize`)
+        
+        // Just resize, preserve aspect ratio
+        processedBuffer = await sharp(buffer)
+          .resize(targetSize, targetSize, {
             fit: 'inside',
             withoutEnlargement: true
           })
-        }
+          .png()
+          .toBuffer()
       }
-      
-      const processedBuffer = await sharpInstance.png().toBuffer()
 
       // Step 5: Vectorize using potrace
       if (mode === "icon") {
         console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Tracing (icon mode)...`)
         svgString = await traceToSvg(processedBuffer)
       } else {
-        console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Posterizing (logo mode, ${colorCount} colors)...`)
-        svgString = await posterizeToSvg(processedBuffer, colorCount)
+        // For small images (<50KB), use posterize (more reliable)
+        // For larger images, use color segmentation (more accurate)
+        const useColorSegmentation = buffer.length > 50000 // 50KB threshold
+        
+        if (useColorSegmentation && detectedColors.length > 0) {
+          console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Color segmentation (large image, ${detectedColors.length} colors)...`)
+          svgString = await colorSegmentToSvg(processedBuffer, detectedColors)
+        } else {
+          console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Posterize (small image, ${colorCount} colors)...`)
+          svgString = await posterizeToSvg(processedBuffer, colorCount)
+        }
       }
       console.log(`[API] ⏱️ ${Date.now() - startTime}ms - Vectorization complete`)
     } else {
@@ -931,15 +1269,29 @@ export async function POST(request: NextRequest) {
     console.log("[API] Optimizing SVG...")
     let optimizedSvg = optimizeSvg(svgString, mode, originalWidth, originalHeight)
     
-    // Step 7: Remove background path if background removal was requested
-    if (shouldRemoveBackground) {
+    // Step 6.5: Scale icon content to fit 24x24 (if icon mode)
+    if (mode === "icon") {
+      optimizedSvg = scaleIconToFit(optimizedSvg)
+    }
+    
+    // Step 7: Remove background path (icon mode only)
+    // For logo mode, background is already removed from the image before vectorization
+    if (mode === "icon" && shouldRemoveBackground) {
       optimizedSvg = removeBackgroundPath(optimizedSvg)
     }
     
-    // Step 8: Apply brand colors for logo mode
+    // Step 8: Apply brand colors for logo mode (only if posterize was used)
+    // colorSegmentToSvg already applies colors, posterizeToSvg needs color application
     if (mode === "logo" && detectedColors.length > 0) {
-      console.log(`[API] Applying brand colors: ${detectedColors.join(", ")}`)
-      optimizedSvg = applyCustomColors(optimizedSvg, detectedColors)
+      // Check if colors were already applied (colorSegmentToSvg adds colors directly)
+      const hasColoredPaths = optimizedSvg.includes('fill="#') && !optimizedSvg.includes('fill="#000')
+      
+      if (!hasColoredPaths) {
+        console.log(`[API] Applying brand colors: ${detectedColors.join(", ")}`)
+        optimizedSvg = applyCustomColors(optimizedSvg, detectedColors)
+      } else {
+        console.log(`[API] Colors already applied during segmentation`)
+      }
     }
 
     // Step 9: Generate React component

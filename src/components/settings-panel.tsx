@@ -142,7 +142,7 @@ export function SettingsPanel({
               <p className="font-medium">🎨 Perfect for logos & branding</p>
               <ul className="ml-4 list-disc space-y-1 text-xs opacity-80">
                 <li>Preserves original brand colors</li>
-                <li>Auto-optimizes to 6 color layers</li>
+                <li>Auto-optimizes to 4 color layers</li>
                 <li>Maintains aspect ratio</li>
               </ul>
             </div>
