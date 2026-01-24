@@ -8,9 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Zap, Github, Sparkles, Save, LogIn } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useConversionCount } from "@/hooks/use-conversion-count"
+import { useSavedAsset } from "@/hooks/use-saved-asset"
 import { AuthModal } from "@/components/auth-modal"
 import { UserMenu } from "@/components/user-menu"
 import { createClient } from "@/lib/supabase/client"
+
+// Brand logo component name - change this to use a different saved logo
+const BRAND_LOGO_NAME = "ABmini"
 
 interface ProcessedResult {
   componentName: string
@@ -36,6 +40,7 @@ export default function Home() {
   
   const { user, loading: authLoading } = useAuth()
   const { count: conversionCount, incrementCount, hasUsedFreeConversion, isLoaded: countLoaded } = useConversionCount()
+  const { asset: brandLogo } = useSavedAsset(BRAND_LOGO_NAME)
   
   const MIN_FILE_SIZE = 10000 // 10KB minimum for good quality
   const RECOMMENDED_FILE_SIZE = 50000 // 50KB recommended
@@ -188,8 +193,20 @@ export default function Home() {
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <div className="flex items-center gap-3.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/20">
-              <Zap className="h-5 w-5 text-white" />
+            <div className={`flex items-center justify-center rounded-xl shadow-lg overflow-hidden ${
+              brandLogo?.svgUrl 
+                ? "h-12 w-12 bg-black p-1" 
+                : "h-10 w-10 bg-gradient-to-br from-primary to-purple-600 shadow-primary/20"
+            }`}>
+              {brandLogo?.svgUrl ? (
+                <img 
+                  src={brandLogo.svgUrl} 
+                  alt="Asset-Bridge Logo" 
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <Zap className="h-5 w-5 text-white" />
+              )}
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight">

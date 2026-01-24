@@ -15,10 +15,12 @@ import {
   Globe,
   Building2,
   Lock,
-  MoreVertical
+  MoreVertical,
+  Share2
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { ShareModal } from "@/components/share-modal"
 
 interface Asset {
   id: string
@@ -42,6 +44,7 @@ export default function MyAssetsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [shareAsset, setShareAsset] = useState<Asset | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -336,22 +339,13 @@ export default function MyAssetsPage() {
                   {/* Actions */}
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => handleCopyComponent(asset)}
+                      onClick={() => setShareAsset(asset)}
                       variant="outline"
                       size="sm"
-                      className="flex-1 gap-2 rounded-lg"
+                      className="flex-1 gap-2 rounded-lg bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
                     >
-                      {copiedId === asset.id ? (
-                        <>
-                          <Check className="h-3.5 w-3.5" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3.5 w-3.5" />
-                          Copy TSX
-                        </>
-                      )}
+                      <Share2 className="h-3.5 w-3.5" />
+                      Share & Embed
                     </Button>
                     <Button
                       onClick={() => handleDownloadSvg(asset)}
@@ -360,7 +354,6 @@ export default function MyAssetsPage() {
                       className="gap-2 rounded-lg"
                     >
                       <Download className="h-3.5 w-3.5" />
-                      SVG
                     </Button>
                   </div>
                 </div>
@@ -378,6 +371,16 @@ export default function MyAssetsPage() {
           </div>
         )}
       </main>
+
+      {/* Share Modal */}
+      {shareAsset && (
+        <ShareModal
+          isOpen={!!shareAsset}
+          onClose={() => setShareAsset(null)}
+          asset={shareAsset}
+          baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
+        />
+      )}
     </div>
   )
 }
