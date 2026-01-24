@@ -5,7 +5,7 @@ import { UploadZone } from "@/components/upload-zone"
 import { SettingsPanel, OutputMode } from "@/components/settings-panel"
 import { ResultsPanel } from "@/components/results-panel"
 import { Button } from "@/components/ui/button"
-import { Zap, Github, Sparkles, Save, LogIn } from "lucide-react"
+import { Zap, Github, Sparkles, Save, LogIn, Coffee } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useConversionCount } from "@/hooks/use-conversion-count"
 import { useSavedAsset } from "@/hooks/use-saved-asset"
@@ -227,6 +227,23 @@ export default function Home() {
               <Sparkles className="h-3 w-3" />
               AI Workflow Ready
             </span>
+            
+            {/* Buy Me a Coffee Button */}
+            <Button 
+              variant="outline" 
+              className="gap-2 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300"
+              asChild
+            >
+              <a
+                href="https://buymeacoffee.com/tzipiw"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Coffee className="h-4 w-4" />
+                <span className="hidden sm:inline">Buy me a coffee</span>
+              </a>
+            </Button>
+            
             <Button variant="ghost" size="icon" className="rounded-xl" asChild>
               <a
                 href="https://github.com/tzipiwalles/iconify-react"
