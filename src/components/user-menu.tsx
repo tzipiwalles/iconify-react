@@ -33,8 +33,9 @@ export function UserMenu() {
     }
   }
 
-  const userInitial = user.email?.charAt(0).toUpperCase() || "U"
-  const avatarUrl = user.user_metadata?.avatar_url
+  // Get initial from name or email
+  const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email
+  const userInitial = displayName?.charAt(0).toUpperCase() || "U"
 
   return (
     <div className="relative">
@@ -42,17 +43,9 @@ export function UserMenu() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 rounded-xl border border-border bg-card/50 px-3 py-2 transition-colors hover:bg-muted"
       >
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt="Avatar"
-            className="h-7 w-7 rounded-lg object-cover"
-          />
-        ) : (
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-white">
-            {userInitial}
-          </div>
-        )}
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-purple-600 text-sm font-semibold text-white">
+          {userInitial}
+        </div>
         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
