@@ -5,7 +5,12 @@ import { UploadZone } from "@/components/upload-zone"
 import { SettingsPanel, OutputMode } from "@/components/settings-panel"
 import { ResultsPanel } from "@/components/results-panel"
 import { Button } from "@/components/ui/button"
-import { Zap, Github, Sparkles } from "lucide-react"
+import { Zap, Github, Sparkles, Save, LogIn } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { useConversionCount } from "@/hooks/use-conversion-count"
+import { AuthModal } from "@/components/auth-modal"
+import { UserMenu } from "@/components/user-menu"
+import { createClient } from "@/lib/supabase/client"
 
 interface ProcessedResult {
   componentName: string
@@ -25,6 +30,12 @@ export default function Home() {
   const [result, setResult] = useState<ProcessedResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [savedAssetId, setSavedAssetId] = useState<string | null>(null)
+  
+  const { user, loading: authLoading } = useAuth()
+  const { count: conversionCount, incrementCount, hasUsedFreeConversion, isLoaded: countLoaded } = useConversionCount()
   
   const MIN_FILE_SIZE = 10000 // 10KB minimum for good quality
   const RECOMMENDED_FILE_SIZE = 50000 // 50KB recommended
@@ -50,13 +61,21 @@ export default function Home() {
     setError(null)
     setWarning(null)
     setComponentName("")
+    setSavedAssetId(null)
   }
 
   const handleProcess = async () => {
     if (!selectedFile) return
 
+    // Check if user needs to sign in (used free conversion and not logged in)
+    if (hasUsedFreeConversion && !user) {
+      setShowAuthModal(true)
+      return
+    }
+
     setIsProcessing(true)
     setError(null)
+    setSavedAssetId(null)
 
     try {
       const formData = new FormData()
@@ -79,10 +98,80 @@ export default function Home() {
       }
 
       setResult(data.data)
+      
+      // Increment conversion count for anonymous users
+      if (!user) {
+        incrementCount()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
       setIsProcessing(false)
+    }
+  }
+
+  const handleSaveAsset = async () => {
+    if (!result || !user || !selectedFile) return
+
+    setIsSaving(true)
+    setError(null)
+
+    try {
+      const supabase = createClient()
+      
+      // 1. Upload original image to storage
+      const originalFileName = `${user.id}/${Date.now()}-${selectedFile.name}`
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("assets")
+        .upload(`originals/${originalFileName}`, selectedFile)
+
+      if (uploadError) throw uploadError
+
+      // Get public URL for original
+      const { data: { publicUrl: originalUrl } } = supabase.storage
+        .from("assets")
+        .getPublicUrl(`originals/${originalFileName}`)
+
+      // 2. Upload SVG to storage
+      const svgBlob = new Blob([result.optimizedSvg], { type: "image/svg+xml" })
+      const svgFileName = `${user.id}/${Date.now()}-${result.componentName}.svg`
+      const { error: svgUploadError } = await supabase.storage
+        .from("assets")
+        .upload(`outputs/${svgFileName}`, svgBlob)
+
+      if (svgUploadError) throw svgUploadError
+
+      const { data: { publicUrl: svgUrl } } = supabase.storage
+        .from("assets")
+        .getPublicUrl(`outputs/${svgFileName}`)
+
+      // 3. Save asset record to database
+      const { data: asset, error: dbError } = await supabase
+        .from("assets")
+        .insert({
+          user_id: user.id,
+          original_filename: selectedFile.name,
+          original_url: originalUrl,
+          original_size_bytes: selectedFile.size,
+          mode: mode,
+          component_name: result.componentName,
+          remove_background: removeBackground,
+          svg_url: svgUrl,
+          react_component: result.reactComponent,
+          detected_colors: result.detectedColors || [],
+          visibility: "private",
+        })
+        .select()
+        .single()
+
+      if (dbError) throw dbError
+
+      setSavedAssetId(asset.id)
+    } catch (err) {
+      console.error("Save error:", err)
+      setError(err instanceof Error ? err.message : "Failed to save asset")
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -126,6 +215,22 @@ export default function Home() {
                 <Github className="h-5 w-5" />
               </a>
             </Button>
+            
+            {/* Auth section */}
+            {!authLoading && (
+              user ? (
+                <UserMenu />
+              ) : (
+                <Button
+                  onClick={() => setShowAuthModal(true)}
+                  variant="outline"
+                  className="gap-2 rounded-xl"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Sign in
+                </Button>
+              )
+            )}
           </div>
         </div>
       </header>
@@ -199,6 +304,45 @@ export default function Home() {
                 </>
               )}
             </Button>
+
+            {/* Save button - only show when there's a result and user is logged in */}
+            {result && user && (
+              <Button
+                onClick={handleSaveAsset}
+                disabled={isSaving || !!savedAssetId}
+                variant="outline"
+                className="h-12 w-full gap-3 rounded-xl border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+              >
+                {isSaving ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
+                    Saving...
+                  </>
+                ) : savedAssetId ? (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Saved!
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save to My Assets
+                  </>
+                )}
+              </Button>
+            )}
+
+            {/* Prompt to sign in to save */}
+            {result && !user && (
+              <Button
+                onClick={() => setShowAuthModal(true)}
+                variant="outline"
+                className="h-12 w-full gap-3 rounded-xl border-muted"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign in to save your work
+              </Button>
+            )}
 
             {/* Detected Colors Display - only for logo mode */}
             {mode === "logo" && result?.detectedColors && result.detectedColors.length > 0 && (
@@ -304,6 +448,13 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        conversionCount={conversionCount}
+      />
     </div>
   )
 }
