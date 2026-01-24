@@ -1278,9 +1278,9 @@ export async function POST(request: NextRequest) {
             gravity: 'center'
           }])
           .png()
-          .toBuffer()
+          .toBuffer() as Buffer<ArrayBuffer>
         } else {
-          buffer = noBgBuffer
+          buffer = noBgBuffer as Buffer<ArrayBuffer>
         }
         
         // For logo mode, trim transparent/white areas after background removal
@@ -1289,7 +1289,7 @@ export async function POST(request: NextRequest) {
           buffer = await sharp(buffer)
             .trim({ threshold: 10 }) // Remove transparent/white borders
             .png()
-            .toBuffer()
+            .toBuffer() as Buffer<ArrayBuffer>
           const afterTrim = await sharp(buffer).metadata()
           console.log(`[API] Trimmed logo: ${beforeTrim.width}x${beforeTrim.height} → ${afterTrim.width}x${afterTrim.height}`)
         }
