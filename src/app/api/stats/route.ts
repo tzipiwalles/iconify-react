@@ -1,8 +1,18 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
+interface StatsResponse {
+  success: boolean
+  data: {
+    users: number
+    icons: number
+    logos: number
+    totalAssets: number
+  }
+}
+
 // Cache the stats for 5 minutes to avoid hitting DB on every request
-let cachedStats: { data: any; timestamp: number } | null = null
+let cachedStats: { data: StatsResponse; timestamp: number } | null = null
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 export async function GET() {
