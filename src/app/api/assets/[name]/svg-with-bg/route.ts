@@ -41,17 +41,31 @@ export async function GET(
     const viewBoxMatch = originalSvg.match(/viewBox="([^"]*)"/)
     const viewBox = viewBoxMatch ? viewBoxMatch[1] : "0 0 24 24"
     
+    // Parse viewBox dimensions
+    const viewBoxParts = viewBox.split(/\s+/).map(Number)
+    const vbWidth = viewBoxParts[2] || 24
+    const vbHeight = viewBoxParts[3] || 24
+    
     // Extract the path/content from original SVG (everything between <svg> tags)
     const contentMatch = originalSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/)
     const svgContent = contentMatch ? contentMatch[1] : originalSvg
+    
+    // Calculate scale to fit with padding (70% of canvas)
+    const padding = size * 0.15
+    const availableSize = size * 0.7
+    const scale = Math.min(availableSize / vbWidth, availableSize / vbHeight)
+    
+    // Center the content
+    const scaledWidth = vbWidth * scale
+    const scaledHeight = vbHeight * scale
+    const offsetX = (size - scaledWidth) / 2
+    const offsetY = (size - scaledHeight) / 2
 
     // Create new SVG with background
     const wrappedSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" fill="${bgColor === 'white' ? '#ffffff' : '#000000'}"/>
-  <g transform="translate(${size * 0.15}, ${size * 0.15}) scale(${size * 0.7 / 24})">
-    <svg viewBox="${viewBox}">
-      ${svgContent}
-    </svg>
+  <g transform="translate(${offsetX}, ${offsetY}) scale(${scale})">
+    ${svgContent}
   </g>
 </svg>`
 

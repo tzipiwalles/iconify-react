@@ -1,7 +1,37 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
+// Helper to verify API key and get the owner's user_id
+async function verifyApiKey(supabase: Awaited<ReturnType<typeof createClient>>, apiKey: string): Promise<{ userId: string; orgId: string | null } | null> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, organization_id")
+    .eq("api_key", apiKey)
+    .single()
+  
+  return profile ? { userId: profile.id, orgId: profile.organization_id } : null
+}
+
+// Format asset response
+function formatAssetResponse(asset: Record<string, unknown>) {
+  return {
+    success: true,
+    data: {
+      id: asset.id,
+      componentName: asset.component_name,
+      reactComponent: asset.react_component,
+      svgUrl: asset.svg_url,
+      optimizedSvg: null,
+      mode: asset.mode,
+      detectedColors: asset.detected_colors,
+      visibility: asset.visibility,
+      createdAt: asset.created_at,
+    },
+  }
+}
+
 // GET /api/assets/[name] - Get a shared asset by component name
+// Supports: session auth, API key auth (?key=sk_xxx), or public access
 export async function GET(
   request: Request,
   { params }: { params: { name: string } }
@@ -9,9 +39,11 @@ export async function GET(
   try {
     const supabase = await createClient()
     const componentName = params.name
+    const { searchParams } = new URL(request.url)
+    const apiKey = searchParams.get("key")
 
     // First try to find a public asset with this name
-    const { data: publicAsset, error: publicError } = await supabase
+    const { data: publicAsset } = await supabase
       .from("assets")
       .select("*")
       .eq("component_name", componentName)
@@ -21,23 +53,60 @@ export async function GET(
       .single()
 
     if (publicAsset) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          id: publicAsset.id,
-          componentName: publicAsset.component_name,
-          reactComponent: publicAsset.react_component,
-          svgUrl: publicAsset.svg_url,
-          optimizedSvg: null, // Could fetch from storage if needed
-          mode: publicAsset.mode,
-          detectedColors: publicAsset.detected_colors,
-          visibility: publicAsset.visibility,
-          createdAt: publicAsset.created_at,
-        },
-      })
+      return NextResponse.json(formatAssetResponse(publicAsset))
     }
 
-    // Check if user is authenticated for private/org assets
+    // Try API key authentication first (for external access)
+    if (apiKey) {
+      const keyOwner = await verifyApiKey(supabase, apiKey)
+      
+      if (!keyOwner) {
+        return NextResponse.json(
+          { success: false, error: "Invalid API key" },
+          { status: 401 }
+        )
+      }
+
+      // Try to find user's own asset
+      const { data: ownAsset } = await supabase
+        .from("assets")
+        .select("*")
+        .eq("component_name", componentName)
+        .eq("user_id", keyOwner.userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single()
+
+      if (ownAsset) {
+        return NextResponse.json(formatAssetResponse(ownAsset))
+      }
+
+      // Try to find organization asset
+      if (keyOwner.orgId) {
+        const { data: orgAssets } = await supabase
+          .from("assets")
+          .select("*, user:profiles!assets_user_id_fkey(organization_id)")
+          .eq("component_name", componentName)
+          .eq("visibility", "organization")
+          .order("created_at", { ascending: false })
+          .limit(10)
+
+        const orgAsset = orgAssets?.find(a => 
+          (a.user as { organization_id: string | null })?.organization_id === keyOwner.orgId
+        )
+
+        if (orgAsset) {
+          return NextResponse.json(formatAssetResponse(orgAsset))
+        }
+      }
+
+      return NextResponse.json(
+        { success: false, error: "Asset not found or not accessible with this API key" },
+        { status: 404 }
+      )
+    }
+
+    // Try session authentication (for logged-in users in the app)
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
@@ -52,23 +121,10 @@ export async function GET(
         .single()
 
       if (ownAsset) {
-        return NextResponse.json({
-          success: true,
-          data: {
-            id: ownAsset.id,
-            componentName: ownAsset.component_name,
-            reactComponent: ownAsset.react_component,
-            svgUrl: ownAsset.svg_url,
-            optimizedSvg: null,
-            mode: ownAsset.mode,
-            detectedColors: ownAsset.detected_colors,
-            visibility: ownAsset.visibility,
-            createdAt: ownAsset.created_at,
-          },
-        })
+        return NextResponse.json(formatAssetResponse(ownAsset))
       }
 
-      // Try to find organization asset (if user belongs to an org)
+      // Try to find organization asset
       const { data: profile } = await supabase
         .from("profiles")
         .select("organization_id")
@@ -76,37 +132,26 @@ export async function GET(
         .single()
 
       if (profile?.organization_id) {
-        const { data: orgAsset } = await supabase
+        const { data: orgAssets } = await supabase
           .from("assets")
-          .select("*, profiles!inner(organization_id)")
+          .select("*, user:profiles!assets_user_id_fkey(organization_id)")
           .eq("component_name", componentName)
           .eq("visibility", "organization")
-          .eq("profiles.organization_id", profile.organization_id)
           .order("created_at", { ascending: false })
-          .limit(1)
-          .single()
+          .limit(10)
+
+        const orgAsset = orgAssets?.find(a => 
+          (a.user as { organization_id: string | null })?.organization_id === profile.organization_id
+        )
 
         if (orgAsset) {
-          return NextResponse.json({
-            success: true,
-            data: {
-              id: orgAsset.id,
-              componentName: orgAsset.component_name,
-              reactComponent: orgAsset.react_component,
-              svgUrl: orgAsset.svg_url,
-              optimizedSvg: null,
-              mode: orgAsset.mode,
-              detectedColors: orgAsset.detected_colors,
-              visibility: orgAsset.visibility,
-              createdAt: orgAsset.created_at,
-            },
-          })
+          return NextResponse.json(formatAssetResponse(orgAsset))
         }
       }
     }
 
     return NextResponse.json(
-      { success: false, error: "Asset not found or not accessible" },
+      { success: false, error: "Asset not found. For private assets, add ?key=your_api_key" },
       { status: 404 }
     )
   } catch (error) {

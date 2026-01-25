@@ -14,6 +14,9 @@ const CACHE_DIR = path.join(process.cwd(), ".cache", "rmbg")
 const rateLimitStore = new Map<string, { count: number; date: string }>()
 const MAX_REQUESTS_PER_DAY = 5
 
+// Admin emails - exempt from rate limiting
+const ADMIN_EMAILS = ["tzipi.walles@gmail.com"]
+
 // Get client IP address
 function getClientIP(request: NextRequest): string {
   // Try various headers that might contain the real IP
@@ -769,20 +772,32 @@ function removeBackgroundPath(svgString: string): string {
     if (dMatch) {
       const d = dMatch[1]
       
+      // Count the complexity of the path (number of commands)
+      const commandCount = (d.match(/[MLHVCSQTAZ]/gi) || []).length
+      
+      // A simple background rectangle has very few commands (usually 4-8)
+      // A real logo/icon has many more commands (curves, lines, etc.)
+      const isSimplePath = commandCount <= 8
+      
       // Check if path starts at origin and covers full viewBox
-      const startsAtOrigin = /^M\s*0[\s,]+/.test(d)
+      const startsAtOrigin = /^M\s*0[\s,]+0?\s/.test(d) || /^M\s*0[\s,]+0[VHLC\s]/.test(d)
       const containsFullWidth = d.includes(`${vbWidth}`) || d.includes(`${vbWidth - 1}`)
       const containsFullHeight = d.includes(`${vbHeight}`) || d.includes(`${vbHeight - 1}`)
-      const isLikelyBackground = startsAtOrigin && containsFullWidth && containsFullHeight
+      
+      // Only remove if it's a SIMPLE path that covers the full viewBox
+      // Complex paths (the actual logo) should be kept even if they span the viewBox
+      const isLikelyBackground = isSimplePath && startsAtOrigin && containsFullWidth && containsFullHeight
       
       // Check if it's a full rectangle path (M 0 0 V height H width V 0 Z)
-      const isFullRect = /^M\s*0[\s,]+[\d.]+[VH]/.test(d) && (containsFullWidth || containsFullHeight)
+      const isFullRect = isSimplePath && /^M\s*0[\s,]+[\d.]+[VH]/.test(d) && (containsFullWidth || containsFullHeight)
       
       if (isLikelyBackground || isFullRect) {
-        console.log("[API] Removed background path (covers full viewBox)")
+        console.log(`[API] Removed background path (simple path with ${commandCount} commands covering full viewBox)`)
         removedCount++
         return ''
       }
+      
+      console.log(`[API] Kept path with ${commandCount} commands`)
     }
     
     keptCount++
@@ -1024,11 +1039,41 @@ function optimizeSvg(
           return {
             element: {
               enter: (node: { attributes: Record<string, string> }) => {
-                if (node.attributes.fill && node.attributes.fill !== "none") {
+                // Replace fill attribute (unless none or transparent)
+                if (node.attributes.fill && 
+                    node.attributes.fill !== "none" && 
+                    node.attributes.fill !== "transparent") {
                   node.attributes.fill = "currentColor"
                 }
-                if (node.attributes.stroke && node.attributes.stroke !== "none") {
+                // Replace stroke attribute (unless none or transparent)
+                if (node.attributes.stroke && 
+                    node.attributes.stroke !== "none" && 
+                    node.attributes.stroke !== "transparent") {
                   node.attributes.stroke = "currentColor"
+                }
+                // Handle style attribute - replace fill/stroke colors
+                if (node.attributes.style) {
+                  node.attributes.style = node.attributes.style
+                    .replace(/fill\s*:\s*(?!none|transparent)[^;]+/gi, "fill:currentColor")
+                    .replace(/stroke\s*:\s*(?!none|transparent)[^;]+/gi, "stroke:currentColor")
+                }
+              },
+            },
+          }
+        },
+      },
+      // Remove style blocks that might contain colors
+      {
+        name: "removeStyleElement",
+        fn: () => {
+          return {
+            element: {
+              enter: (node: { name: string }, parentNode: { children?: unknown[] }) => {
+                if (node.name === "style" && parentNode.children) {
+                  const index = parentNode.children.indexOf(node)
+                  if (index > -1) {
+                    parentNode.children.splice(index, 1)
+                  }
                 }
               },
             },
@@ -1212,26 +1257,36 @@ function generateComponentName(filename: string, customName?: string, mode?: Out
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
   
-  // Check rate limit first
+  // Check if user is admin (exempt from rate limiting)
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email)
+  
+  // Check rate limit (skip for admin users)
   const clientIP = getClientIP(request)
-  const { allowed, remaining } = checkRateLimit(clientIP)
   
-  if (!allowed) {
-    console.log(`[API] ⛔ Rate limit exceeded for IP: ${clientIP}`)
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: "Daily limit reached. Come back tomorrow!",
-        limitInfo: {
-          maxRequests: MAX_REQUESTS_PER_DAY,
-          remaining: 0
-        }
-      },
-      { status: 429 }
-    )
+  if (!isAdmin) {
+    const { allowed, remaining } = checkRateLimit(clientIP)
+    
+    if (!allowed) {
+      console.log(`[API] ⛔ Rate limit exceeded for IP: ${clientIP}`)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "Daily limit reached. Come back tomorrow!",
+          limitInfo: {
+            maxRequests: MAX_REQUESTS_PER_DAY,
+            remaining: 0
+          }
+        },
+        { status: 429 }
+      )
+    }
+    
+    console.log(`[API] ✅ Rate limit check passed for IP: ${clientIP} (${remaining} remaining today)`)
+  } else {
+    console.log(`[API] 👑 Admin user detected - skipping rate limit`)
   }
-  
-  console.log(`[API] ✅ Rate limit check passed for IP: ${clientIP} (${remaining} remaining today)`)
   
   try {
     console.log("[API] ========== Starting file processing ==========")
@@ -1531,8 +1586,10 @@ export async function POST(request: NextRequest) {
       console.warn(`[API] ⚠️ WARNING: Processing took ${totalTime}ms - close to Vercel timeout`)
     }
     
-    // Increment rate limit counter after successful processing
-    incrementRateLimit(clientIP)
+    // Increment rate limit counter after successful processing (skip for admin)
+    if (!isAdmin) {
+      incrementRateLimit(clientIP)
+    }
     
     return NextResponse.json({
       success: true,

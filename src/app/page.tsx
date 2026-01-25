@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { UploadZone } from "@/components/upload-zone"
 import { SettingsPanel, OutputMode } from "@/components/settings-panel"
 import { ResultsPanel } from "@/components/results-panel"
@@ -44,19 +44,39 @@ export default function Home() {
   const { asset: brandLogo } = useSavedAsset(BRAND_LOGO_NAME)
   const { stats } = useStats()
   
-  const MIN_FILE_SIZE = 10000 // 10KB minimum for good quality
-  const RECOMMENDED_FILE_SIZE = 50000 // 50KB recommended
+  // Size limits differ by mode - icons are naturally smaller
+  const getMinFileSize = () => mode === "icon" ? 500 : 5000 // 500B for icons, 5KB for logos
+  const getRecommendedFileSize = () => mode === "icon" ? 2000 : 30000 // 2KB for icons, 30KB for logos
+
+  // Re-evaluate warning when mode changes
+  useEffect(() => {
+    if (selectedFile) {
+      const minSize = getMinFileSize()
+      const recommendedSize = getRecommendedFileSize()
+      
+      if (selectedFile.size < minSize) {
+        setWarning(`⚠️ Image is very small (${Math.round(selectedFile.size / 1000)}KB). Results may vary.`)
+      } else if (selectedFile.size < recommendedSize && mode === "logo") {
+        setWarning(`💡 Image is ${Math.round(selectedFile.size / 1000)}KB. For better color accuracy in Logo mode, we recommend larger images.`)
+      } else {
+        setWarning(null)
+      }
+    }
+  }, [mode, selectedFile])
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
     setResult(null)
     setError(null)
     
-    // Check file size and warn if too small
-    if (file.size < MIN_FILE_SIZE) {
-      setWarning(`⚠️ Image is very small (${Math.round(file.size / 1000)}KB). For best results, use images larger than 50KB. Small images may lose detail and colors.`)
-    } else if (file.size < RECOMMENDED_FILE_SIZE) {
-      setWarning(`💡 Image is ${Math.round(file.size / 1000)}KB. For better color accuracy in Logo mode, we recommend images larger than 50KB.`)
+    // Check file size and warn if too small (mode-aware)
+    const minSize = getMinFileSize()
+    const recommendedSize = getRecommendedFileSize()
+    
+    if (file.size < minSize) {
+      setWarning(`⚠️ Image is very small (${Math.round(file.size / 1000)}KB). Results may vary.`)
+    } else if (file.size < recommendedSize && mode === "logo") {
+      setWarning(`💡 Image is ${Math.round(file.size / 1000)}KB. For better color accuracy in Logo mode, we recommend larger images.`)
     } else {
       setWarning(null)
     }

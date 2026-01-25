@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { X, Copy, Check, Code, Image, Globe, Link as LinkIcon } from "lucide-react"
+import { X, Copy, Check, Code, Image, Globe, Link as LinkIcon, Sparkles } from "lucide-react"
 
 interface ShareModalProps {
   isOpen: boolean
@@ -16,17 +16,43 @@ interface ShareModalProps {
   baseUrl: string
 }
 
-type CopyType = "url" | "img" | "react" | "html" | null
+type CopyType = "url" | "img" | "react" | "html" | "prompt" | null
 
 export function ShareModal({ isOpen, onClose, asset, baseUrl }: ShareModalProps) {
   const [copied, setCopied] = useState<CopyType>(null)
+  const [apiKey, setApiKey] = useState<string | null>(null)
+
+  const isPublic = asset.visibility === "public"
+
+  // Fetch API key when modal opens (for non-public assets)
+  useEffect(() => {
+    if (isOpen && !isPublic) {
+      fetch("/api/user/api-key")
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setApiKey(data.data.apiKey)
+          }
+        })
+        .catch(console.error)
+    }
+  }, [isOpen, isPublic])
 
   if (!isOpen) return null
 
-  const svgEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg`
-  const svgWithBgBlack = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg-with-bg?bg=black`
-  const svgWithBgWhite = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg-with-bg?bg=white`
-  const jsonEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}`
+  // Build URLs with API key for non-public assets
+  const keyParam = !isPublic && apiKey ? `?key=${apiKey}` : ""
+  const svgEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg${keyParam}`
+  const jsonEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}${keyParam}`
+
+  // AI Prompt content
+  const aiPromptContent = `When generating code that needs my "${asset.component_name}" logo/icon, use this image URL:
+${svgEndpoint}
+
+Example usage in React/HTML:
+<img src="${svgEndpoint}" alt="${asset.component_name}" />
+
+The asset is hosted${isPublic ? " and publicly accessible" : " (requires API key)"}. Use it directly in any code you generate.`
 
   const embedOptions = [
     {
@@ -35,6 +61,14 @@ export function ShareModal({ isOpen, onClose, asset, baseUrl }: ShareModalProps)
       description: "Use anywhere as image source",
       icon: LinkIcon,
       code: svgEndpoint,
+    },
+    {
+      id: "prompt" as CopyType,
+      title: "AI Prompt",
+      description: "For Claude, ChatGPT, Cursor",
+      icon: Sparkles,
+      code: aiPromptContent,
+      highlight: true,
     },
     {
       id: "img" as CopyType,
@@ -79,8 +113,6 @@ useEffect(() => {
     }
   }
 
-  const isPublic = asset.visibility === "public"
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
@@ -107,11 +139,17 @@ useEffect(() => {
           </p>
         </div>
 
-        {/* Public warning */}
+        {/* Private asset info */}
         {!isPublic && (
-          <div className="mb-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">
-            <strong>Note:</strong> This asset is not public. The URL and API endpoints will only work for you.
-            Mark it as <strong>Public</strong> to share with others.
+          <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+            <strong>🔐 Private Asset:</strong> To use this in AI tools or share the URL, you need to either:
+            <ul className="mt-2 ml-4 list-disc space-y-1">
+              <li>Mark it as <strong>Public</strong> (anyone can access)</li>
+              <li>Add your API key: <code className="rounded bg-black/30 px-1.5 py-0.5 text-xs">?key=your_api_key</code></li>
+            </ul>
+            <p className="mt-2 text-xs text-amber-300/80">
+              Get your API key in <a href="/profile" className="underline hover:text-amber-200">Profile Settings</a>
+            </p>
           </div>
         )}
 
@@ -120,12 +158,16 @@ useEffect(() => {
           {embedOptions.map((option) => (
             <div
               key={option.id}
-              className="rounded-xl border border-border bg-muted/30 p-4"
+              className={`rounded-xl border p-4 ${
+                option.highlight 
+                  ? "border-purple-500/30 bg-purple-500/5" 
+                  : "border-border bg-muted/30"
+              }`}
             >
               <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <option.icon className="h-4 w-4 text-primary" />
-                  <span className="font-medium">{option.title}</span>
+                  <option.icon className={`h-4 w-4 ${option.highlight ? "text-purple-400" : "text-primary"}`} />
+                  <span className={`font-medium ${option.highlight ? "text-purple-400" : ""}`}>{option.title}</span>
                   <span className="text-xs text-muted-foreground">
                     {option.description}
                   </span>
@@ -134,7 +176,7 @@ useEffect(() => {
                   onClick={() => handleCopy(option.id, option.code)}
                   variant="outline"
                   size="sm"
-                  className="gap-2"
+                  className={`gap-2 ${option.highlight ? "border-purple-500/30 text-purple-400 hover:bg-purple-500/10" : ""}`}
                 >
                   {copied === option.id ? (
                     <>
@@ -149,57 +191,11 @@ useEffect(() => {
                   )}
                 </Button>
               </div>
-              <pre className="overflow-x-auto rounded-lg bg-black/50 p-3 text-xs text-gray-300">
+              <pre className="overflow-x-auto rounded-lg bg-black/50 p-3 text-xs text-gray-300 whitespace-pre-wrap">
                 <code>{option.code.length > 500 ? option.code.slice(0, 500) + "..." : option.code}</code>
               </pre>
             </div>
           ))}
-        </div>
-
-        {/* Background Options */}
-        <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-          <p className="mb-3 text-sm font-medium text-amber-400">🎨 With Background (for favicons, logos)</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg border border-border bg-card p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-medium">Black Background</span>
-                <Button
-                  onClick={() => handleCopy("url", svgWithBgBlack)}
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                >
-                  {copied === "url" && svgWithBgBlack ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                </Button>
-              </div>
-              <div className="flex items-center justify-center rounded bg-black p-3">
-                <img src={svgWithBgBlack} alt="With black bg" className="h-12 w-12" />
-              </div>
-              <code className="mt-2 block truncate text-[10px] text-muted-foreground">
-                ...svg-with-bg?bg=black
-              </code>
-            </div>
-            
-            <div className="rounded-lg border border-border bg-card p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-medium">White Background</span>
-                <Button
-                  onClick={() => handleCopy("url", svgWithBgWhite)}
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                >
-                  {copied === "url" && svgWithBgWhite ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                </Button>
-              </div>
-              <div className="flex items-center justify-center rounded bg-white p-3">
-                <img src={svgWithBgWhite} alt="With white bg" className="h-12 w-12" />
-              </div>
-              <code className="mt-2 block truncate text-[10px] text-muted-foreground">
-                ...svg-with-bg?bg=white
-              </code>
-            </div>
-          </div>
         </div>
 
         {/* Preview */}

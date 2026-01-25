@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   full_name TEXT,
   avatar_url TEXT,
   organization_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL,
+  api_key TEXT UNIQUE, -- For accessing private/org assets via API
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
