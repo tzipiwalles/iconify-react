@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import { User, LogOut, FolderOpen, ChevronDown } from "lucide-react"
+import { User, LogOut, FolderOpen, ChevronDown, Shield } from "lucide-react"
 import Link from "next/link"
 
 export function UserMenu() {
@@ -36,6 +36,7 @@ export function UserMenu() {
   // Get initial from name or email
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email
   const userInitial = displayName?.charAt(0).toUpperCase() || "U"
+  const isAdmin = user.email === "tzipi.walles@gmail.com"
 
   return (
     <div className="relative">
@@ -83,6 +84,17 @@ export function UserMenu() {
               <User className="h-4 w-4 text-muted-foreground" />
               Profile
             </Link>
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-orange-400 transition-colors hover:bg-orange-500/10"
+              >
+                <Shield className="h-4 w-4" />
+                Admin Dashboard
+              </Link>
+            )}
 
             <hr className="my-2 border-border" />
 

@@ -5,10 +5,11 @@ import { UploadZone } from "@/components/upload-zone"
 import { SettingsPanel, OutputMode } from "@/components/settings-panel"
 import { ResultsPanel } from "@/components/results-panel"
 import { Button } from "@/components/ui/button"
-import { Zap, Github, Sparkles, Save, LogIn, Coffee } from "lucide-react"
+import { Zap, Github, Sparkles, Save, LogIn, Coffee, Users, ImageIcon } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useConversionCount } from "@/hooks/use-conversion-count"
 import { useSavedAsset } from "@/hooks/use-saved-asset"
+import { useStats } from "@/hooks/use-stats"
 import { AuthModal } from "@/components/auth-modal"
 import { UserMenu } from "@/components/user-menu"
 import { createClient } from "@/lib/supabase/client"
@@ -41,6 +42,7 @@ export default function Home() {
   const { user, loading: authLoading } = useAuth()
   const { count: conversionCount, incrementCount, hasUsedFreeConversion, isLoaded: countLoaded } = useConversionCount()
   const { asset: brandLogo } = useSavedAsset(BRAND_LOGO_NAME)
+  const { stats } = useStats()
   
   const MIN_FILE_SIZE = 10000 // 10KB minimum for good quality
   const RECOMMENDED_FILE_SIZE = 50000 // 50KB recommended
@@ -274,23 +276,23 @@ export default function Home() {
       </header>
 
       {/* Main content */}
-      <main className="mx-auto max-w-7xl px-6 py-12">
-        <div className="mb-12 text-center">
-          <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+      <main className="mx-auto max-w-7xl px-6 py-6">
+        <div className="mb-6 text-center">
+          <h2 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
             Transform Assets into{" "}
             <span className="bg-gradient-to-r from-primary via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
               React Components
             </span>
           </h2>
-          <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
             Upload your images or SVGs and get optimized, AI-friendly React
             components — ready for any coding workflow.
           </p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr,400px]">
+        <div className="grid gap-6 lg:grid-cols-[1fr,380px]">
           {/* Left column - Upload and Results */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <UploadZone
               onFileSelect={handleFileSelect}
               selectedFile={selectedFile}
@@ -314,7 +316,7 @@ export default function Home() {
           </div>
 
           {/* Right column - Settings */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <SettingsPanel
               mode={mode}
               onModeChange={setMode}
@@ -478,9 +480,22 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-border/50 py-6">
-        <div className="mx-auto max-w-7xl px-6 text-center text-sm text-muted-foreground">
-          <p>
+      <footer className="mt-auto border-t border-border/50 py-4">
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Stats */}
+          <div className="mb-3 flex items-center justify-center gap-6 text-sm">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span className="font-medium text-foreground">{stats.users}</span> users
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <ImageIcon className="h-4 w-4" />
+              <span className="font-medium text-foreground">{stats.totalAssets}</span> assets created
+            </div>
+          </div>
+          {/* Credit */}
+          <p className="text-center text-sm text-muted-foreground">
             Built for AI coding workflows •{" "}
             <span className="font-medium text-foreground">Asset-Bridge</span>
           </p>
