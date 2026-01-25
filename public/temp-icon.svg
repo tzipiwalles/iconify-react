@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#000000"/>
+  <g transform="translate(128, 128) scale(0.5)">
+    <!-- ABmini logo will go here - we'll fetch it from the API -->
+  </g>
+</svg>

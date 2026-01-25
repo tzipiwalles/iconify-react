@@ -24,6 +24,8 @@ export function ShareModal({ isOpen, onClose, asset, baseUrl }: ShareModalProps)
   if (!isOpen) return null
 
   const svgEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg`
+  const svgWithBgBlack = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg-with-bg?bg=black`
+  const svgWithBgWhite = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg-with-bg?bg=white`
   const jsonEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}`
 
   const embedOptions = [
@@ -154,9 +156,55 @@ useEffect(() => {
           ))}
         </div>
 
+        {/* Background Options */}
+        <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <p className="mb-3 text-sm font-medium text-amber-400">🎨 With Background (for favicons, logos)</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium">Black Background</span>
+                <Button
+                  onClick={() => handleCopy("url", svgWithBgBlack)}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                >
+                  {copied === "url" && svgWithBgBlack ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                </Button>
+              </div>
+              <div className="flex items-center justify-center rounded bg-black p-3">
+                <img src={svgWithBgBlack} alt="With black bg" className="h-12 w-12" />
+              </div>
+              <code className="mt-2 block truncate text-[10px] text-muted-foreground">
+                ...svg-with-bg?bg=black
+              </code>
+            </div>
+            
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium">White Background</span>
+                <Button
+                  onClick={() => handleCopy("url", svgWithBgWhite)}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                >
+                  {copied === "url" && svgWithBgWhite ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                </Button>
+              </div>
+              <div className="flex items-center justify-center rounded bg-white p-3">
+                <img src={svgWithBgWhite} alt="With white bg" className="h-12 w-12" />
+              </div>
+              <code className="mt-2 block truncate text-[10px] text-muted-foreground">
+                ...svg-with-bg?bg=white
+              </code>
+            </div>
+          </div>
+        </div>
+
         {/* Preview */}
         <div className="mt-6 rounded-xl border border-border p-4">
-          <p className="mb-3 text-sm font-medium">Preview:</p>
+          <p className="mb-3 text-sm font-medium">Preview (Original):</p>
           <div className="flex items-center justify-center rounded-lg bg-muted/50 p-6">
             <img 
               src={asset.svg_url} 
