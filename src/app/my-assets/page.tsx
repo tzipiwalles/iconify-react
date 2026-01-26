@@ -36,7 +36,7 @@ export default function MyAssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [_copiedId, setCopiedId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [shareAsset, setShareAsset] = useState<Asset | null>(null)
@@ -73,7 +73,7 @@ export default function MyAssetsPage() {
     }
   }
 
-  const handleCopyComponent = async (asset: Asset) => {
+  const _handleCopyComponent = async (asset: Asset) => {
     try {
       await navigator.clipboard.writeText(asset.react_component)
       setCopiedId(asset.id)
@@ -216,10 +216,6 @@ export default function MyAssetsPage() {
                     {asset.mode}
                   </span>
 
-                  {/* Visibility */}
-                  <div className="absolute right-3 top-3">
-                    {getVisibilityIcon(asset.visibility)}
-                  </div>
                 </div>
 
                 {/* Info */}
