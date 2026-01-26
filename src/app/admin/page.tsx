@@ -35,11 +35,26 @@ interface AdminData {
   }
 }
 
+interface Feedback {
+  id: string
+  message: string
+  email: string | null
+  user_agent: string | null
+  created_at: string
+  user_id: string | null
+  profiles: {
+    email: string
+    name: string | null
+  } | null
+}
+
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [data, setData] = useState<AdminData | null>(null)
+  const [feedback, setFeedback] = useState<Feedback[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingFeedback, setLoadingFeedback] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -51,6 +66,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (user) {
       fetchAdminData()
+      fetchFeedback()
     }
   }, [user])
 
@@ -75,6 +91,27 @@ export default function AdminPage() {
       setError("Failed to fetch admin data")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchFeedback = async () => {
+    try {
+      setLoadingFeedback(true)
+      const response = await fetch("/api/feedback")
+      
+      if (!response.ok) {
+        console.error("Failed to fetch feedback:", response.status)
+        return
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setFeedback(result.data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch feedback:", err)
+    } finally {
+      setLoadingFeedback(false)
     }
   }
 
@@ -242,6 +279,68 @@ export default function AdminPage() {
               No users yet
             </div>
           )}
+        </div>
+
+        {/* Feedback Section */}
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="border-b border-border/50 bg-muted/30 px-6 py-4">
+            <h2 className="text-lg font-semibold">User Feedback</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {loadingFeedback ? "Loading..." : `${feedback.length} total submissions`}
+            </p>
+          </div>
+
+          <div className="divide-y divide-border">
+            {!loadingFeedback && feedback.map((item) => (
+              <div key={item.id} className="p-6 hover:bg-muted/20 transition-colors">
+                <div className="mb-3 flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      {item.profiles ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-primary to-purple-600 text-xs font-semibold text-white">
+                            {(item.profiles.name || item.profiles.email)?.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-medium">{item.profiles.email}</span>
+                        </div>
+                      ) : item.email ? (
+                        <span className="text-sm text-muted-foreground">{item.email}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Anonymous</span>
+                      )}
+                    </div>
+                  </div>
+                  <time className="text-xs text-muted-foreground">
+                    {new Date(item.created_at).toLocaleString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-foreground">{item.message}</p>
+                {item.user_agent && (
+                  <p className="mt-2 text-xs text-muted-foreground/60">
+                    {item.user_agent.substring(0, 80)}{item.user_agent.length > 80 ? "..." : ""}
+                  </p>
+                )}
+              </div>
+            ))}
+
+            {!loadingFeedback && feedback.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground">
+                No feedback yet
+              </div>
+            )}
+
+            {loadingFeedback && (
+              <div className="flex items-center justify-center p-8">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>

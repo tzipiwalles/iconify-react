@@ -11,6 +11,7 @@ import { useConversionCount } from "@/hooks/use-conversion-count"
 import { useSavedAsset } from "@/hooks/use-saved-asset"
 import { useStats } from "@/hooks/use-stats"
 import { AuthModal } from "@/components/auth-modal"
+import { FeedbackModal } from "@/components/feedback-modal"
 import { UserMenu } from "@/components/user-menu"
 import { createClient } from "@/lib/supabase/client"
 
@@ -36,6 +37,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [savedAssetId, setSavedAssetId] = useState<string | null>(null)
   
@@ -535,22 +537,31 @@ export default function Home() {
               <span className="font-medium text-foreground">{stats.totalAssets}</span> assets created
             </div>
           </div>
-          {/* Credit & Coffee */}
-          <div className="flex items-center justify-center gap-3">
+          {/* Credit, Coffee & Feedback */}
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <p className="text-sm text-muted-foreground">
               Built for AI coding workflows •{" "}
               <span className="font-medium text-foreground">Asset-Bridge</span>
             </p>
-            <span className="text-muted-foreground">•</span>
-            <a
-              href="https://buymeacoffee.com/tzipiw"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 transition-colors"
-            >
-              <Coffee className="h-4 w-4" />
-              <span>Buy me a coffee</span>
-            </a>
+            <span className="hidden text-muted-foreground sm:inline">•</span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowFeedbackModal(true)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Give Feedback
+              </button>
+              <span className="text-muted-foreground">•</span>
+              <a
+                href="https://buymeacoffee.com/tzipiw"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+              >
+                <Coffee className="h-4 w-4" />
+                <span>Buy me a coffee</span>
+              </a>
+            </div>
           </div>
         </div>
       </footer>
@@ -560,6 +571,12 @@ export default function Home() {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         conversionCount={conversionCount}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
     </div>
   )
