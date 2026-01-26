@@ -118,15 +118,28 @@ export default function Home() {
         body: formData,
       })
 
-      const data = await response.json()
-
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get("content-type")
+      const isJson = contentType?.includes("application/json")
+      
       if (!response.ok) {
         // Special handling for rate limit (429)
         if (response.status === 429) {
           throw new Error("⏰ Daily limit reached! Come back tomorrow or sign in for unlimited access.")
         }
-        throw new Error(data.error || "Processing failed")
+        
+        // Try to parse error message if it's JSON
+        if (isJson) {
+          const data = await response.json()
+          throw new Error(data.error || "Processing failed")
+        } else {
+          // Non-JSON error (likely server error page)
+          const text = await response.text()
+          throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`)
+        }
       }
+
+      const data = await response.json()
 
       setResult(data.data)
       

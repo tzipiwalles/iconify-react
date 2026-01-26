@@ -90,11 +90,21 @@ export default function DebugPage() {
         body: formData,
       })
 
-      const data = await response.json()
-
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get("content-type")
+      const isJson = contentType?.includes("application/json")
+      
       if (!response.ok) {
-        throw new Error(data.error || "Processing failed")
+        if (isJson) {
+          const data = await response.json()
+          throw new Error(data.error || "Processing failed")
+        } else {
+          const text = await response.text()
+          throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`)
+        }
       }
+
+      const data = await response.json()
 
       setResult(data.data)
       

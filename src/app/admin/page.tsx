@@ -58,16 +58,17 @@ export default function AdminPage() {
     try {
       setLoading(true)
       const response = await fetch("/api/admin/users")
-      const result = await response.json()
-
+      
       if (!response.ok) {
         if (response.status === 403) {
           setError("Access denied. Admin only.")
         } else {
-          setError(result.error || "Failed to load data")
+          setError(`Failed to load data (${response.status})`)
         }
         return
       }
+
+      const result = await response.json()
 
       setData(result.data)
     } catch (err) {

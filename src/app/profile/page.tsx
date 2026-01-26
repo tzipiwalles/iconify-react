@@ -44,6 +44,12 @@ export default function ProfilePage() {
     try {
       setLoading(true)
       const response = await fetch("/api/user/api-key")
+      
+      if (!response.ok) {
+        setError(`Failed to fetch API key (${response.status})`)
+        return
+      }
+
       const result = await response.json()
 
       if (result.success) {
@@ -78,6 +84,12 @@ export default function ProfilePage() {
     try {
       setRefreshing(true)
       const response = await fetch("/api/user/api-key", { method: "POST" })
+      
+      if (!response.ok) {
+        setError(`Failed to refresh API key (${response.status})`)
+        return
+      }
+
       const result = await response.json()
 
       if (result.success) {
