@@ -42,10 +42,6 @@ interface Feedback {
   user_agent: string | null
   created_at: string
   user_id: string | null
-  profiles: {
-    email: string
-    full_name: string | null
-  } | null
 }
 
 export default function AdminPage() {
@@ -300,12 +296,12 @@ export default function AdminPage() {
                 <div className="mb-3 flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      {item.profiles ? (
+                      {item.user_id ? (
                         <div className="flex items-center gap-2">
                           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-primary to-purple-600 text-xs font-semibold text-white">
-                            {(item.profiles.full_name || item.profiles.email)?.charAt(0).toUpperCase()}
+                            U
                           </div>
-                          <span className="text-sm font-medium">{item.profiles.email}</span>
+                          <span className="text-sm font-medium">Logged in user</span>
                         </div>
                       ) : item.email ? (
                         <span className="text-sm text-muted-foreground">{item.email}</span>
