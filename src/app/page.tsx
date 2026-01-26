@@ -45,12 +45,20 @@ export default function Home() {
   const { stats } = useStats()
   
   // Size limits differ by mode - icons are naturally smaller
+  const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4MB (Vercel serverless limit is 4.5MB)
   const getMinFileSize = () => mode === "icon" ? 500 : 5000 // 500B for icons, 5KB for logos
   const getRecommendedFileSize = () => mode === "icon" ? 2000 : 30000 // 2KB for icons, 30KB for logos
 
   // Re-evaluate warning when mode changes
   useEffect(() => {
     if (selectedFile) {
+      // Check if too large
+      if (selectedFile.size > MAX_FILE_SIZE) {
+        setError(`File is too large (${Math.round(selectedFile.size / 1024 / 1024)}MB). Maximum size is 4MB.`)
+        setWarning(null)
+        return
+      }
+      
       const minSize = getMinFileSize()
       const recommendedSize = getRecommendedFileSize()
       
@@ -68,6 +76,13 @@ export default function Home() {
     setSelectedFile(file)
     setResult(null)
     setError(null)
+    
+    // Check if file is too large
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`File is too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum size is 4MB.`)
+      setWarning(null)
+      return
+    }
     
     // Check file size and warn if too small (mode-aware)
     const minSize = getMinFileSize()
@@ -93,6 +108,12 @@ export default function Home() {
 
   const handleProcess = async () => {
     if (!selectedFile) return
+
+    // Check file size limit
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      setError(`File is too large (${Math.round(selectedFile.size / 1024 / 1024)}MB). Maximum size is 4MB.`)
+      return
+    }
 
     // Check if user needs to sign in (used free conversion and not logged in)
     if (hasUsedFreeConversion && !user) {
@@ -123,9 +144,12 @@ export default function Home() {
       const isJson = contentType?.includes("application/json")
       
       if (!response.ok) {
-        // Special handling for rate limit (429)
+        // Special handling for specific errors
         if (response.status === 429) {
           throw new Error("⏰ Daily limit reached! Come back tomorrow or sign in for unlimited access.")
+        }
+        if (response.status === 413) {
+          throw new Error(`📦 File is too large (${Math.round(selectedFile.size / 1024 / 1024)}MB). Maximum size is 4MB. Try using a smaller image.`)
         }
         
         // Try to parse error message if it's JSON
