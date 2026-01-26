@@ -190,7 +190,7 @@ export default function Home() {
           svg_url: svgUrl,
           react_component: result.reactComponent,
           detected_colors: result.detectedColors || [],
-          visibility: "private",
+          visibility: "public", // MVP: all assets are public by default
         })
         .select()
         .single()

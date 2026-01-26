@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { X, Copy, Check, Code, Image, Globe, Link as LinkIcon, Sparkles } from "lucide-react"
 
@@ -20,30 +20,12 @@ type CopyType = "url" | "img" | "react" | "html" | "prompt" | null
 
 export function ShareModal({ isOpen, onClose, asset, baseUrl }: ShareModalProps) {
   const [copied, setCopied] = useState<CopyType>(null)
-  const [apiKey, setApiKey] = useState<string | null>(null)
-
-  const isPublic = asset.visibility === "public"
-
-  // Fetch API key when modal opens (for non-public assets)
-  useEffect(() => {
-    if (isOpen && !isPublic) {
-      fetch("/api/user/api-key")
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setApiKey(data.data.apiKey)
-          }
-        })
-        .catch(console.error)
-    }
-  }, [isOpen, isPublic])
 
   if (!isOpen) return null
 
-  // Build URLs with API key for non-public assets
-  const keyParam = !isPublic && apiKey ? `?key=${apiKey}` : ""
-  const svgEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg${keyParam}`
-  const jsonEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}${keyParam}`
+  // All assets are public in MVP
+  const svgEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg`
+  const jsonEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}`
 
   // AI Prompt content
   const aiPromptContent = `When generating code that needs my "${asset.component_name}" logo/icon, use this image URL:
@@ -52,7 +34,8 @@ ${svgEndpoint}
 Example usage in React/HTML:
 <img src="${svgEndpoint}" alt="${asset.component_name}" />
 
-The asset is hosted${isPublic ? " and publicly accessible" : " (requires API key)"}. Use it directly in any code you generate.`
+DO NOT generate or create the logo as inline SVG.
+ALWAYS use the URL above - it's hosted and publicly accessible.`
 
   const embedOptions = [
     {
@@ -138,20 +121,6 @@ useEffect(() => {
             Copy code to use <span className="font-medium text-foreground">{asset.component_name}</span> in your project
           </p>
         </div>
-
-        {/* Private asset info */}
-        {!isPublic && (
-          <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
-            <strong>🔐 Private Asset:</strong> To use this in AI tools or share the URL, you need to either:
-            <ul className="mt-2 ml-4 list-disc space-y-1">
-              <li>Mark it as <strong>Public</strong> (anyone can access)</li>
-              <li>Add your API key: <code className="rounded bg-black/30 px-1.5 py-0.5 text-xs">?key=your_api_key</code></li>
-            </ul>
-            <p className="mt-2 text-xs text-amber-300/80">
-              Get your API key in <a href="/profile" className="underline hover:text-amber-200">Profile Settings</a>
-            </p>
-          </div>
-        )}
 
         {/* Embed options */}
         <div className="space-y-4">

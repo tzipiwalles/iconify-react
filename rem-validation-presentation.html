@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REM Validation Phases - Mobileye</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        .presentation {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            width: 100%;
+            height: 100%;
+            padding: 60px 80px;
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .slide.active {
+            display: flex;
+        }
+
+        /* Title Slide */
+        .slide.title-slide {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .slide.title-slide .logo-large {
+            width: 300px;
+            margin-bottom: 60px;
+        }
+
+        .slide.title-slide h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00d4ff, #0099cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+        }
+
+        .slide.title-slide .subtitle {
+            font-size: 1.5rem;
+            color: #a0a0a0;
+            margin-bottom: 40px;
+        }
+
+        .slide.title-slide .author {
+            font-size: 1.1rem;
+            color: #666;
+            margin-top: 40px;
+        }
+
+        /* Content Slides */
+        .slide-header {
+            margin-bottom: 40px;
+        }
+
+        .slide-header h2 {
+            font-size: 2.2rem;
+            color: #00d4ff;
+            border-bottom: 3px solid #00d4ff;
+            padding-bottom: 15px;
+            display: inline-block;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .content ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .content ul li {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            padding-left: 40px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .content ul li::before {
+            content: '▶';
+            position: absolute;
+            left: 0;
+            color: #00d4ff;
+            font-size: 1rem;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1rem;
+        }
+
+        th, td {
+            padding: 15px 20px;
+            text-align: left;
+            border: 1px solid #333;
+        }
+
+        th {
+            background: linear-gradient(90deg, #00d4ff, #0099cc);
+            color: #1a1a2e;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        td {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover td {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .status-tbd {
+            color: #ffa500;
+            font-weight: 600;
+        }
+
+        /* Grid Layout for Tools */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .tool-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            border-color: #00d4ff;
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+        }
+
+        .tool-card h3 {
+            font-size: 1.5rem;
+            color: #00d4ff;
+            margin-bottom: 15px;
+        }
+
+        .tool-card p {
+            color: #a0a0a0;
+            font-size: 1rem;
+        }
+
+        /* KPI Section */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 153, 204, 0.05));
+            border: 2px solid #00d4ff;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .kpi-card h3 {
+            font-size: 1.8rem;
+            color: #00d4ff;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card .metric {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .kpi-card .description {
+            color: #a0a0a0;
+            margin-top: 15px;
+            font-size: 1.1rem;
+        }
+
+        /* Footer with small logo */
+        .slide-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            margin-top: auto;
+        }
+
+        .slide-footer .page-number {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Navigation */
+        .nav-controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: rgba(0, 212, 255, 0.2);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+            padding: 12px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #00d4ff;
+            color: #1a1a2e;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* Phase indicator */
+        .phase-box {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #1a1a2e;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            display: inline-block;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide.active .content,
+        .slide.active .slide-header {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Final slide */
+        .slide.final-slide {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .slide.final-slide .logo-large {
+            height: 100px;
+            margin-bottom: 50px;
+        }
+
+        .slide.final-slide h2 {
+            font-size: 3rem;
+            color: #00d4ff;
+            margin-bottom: 30px;
+        }
+
+        .slide.final-slide p {
+            font-size: 1.5rem;
+            color: #a0a0a0;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00d4ff, #0099cc);
+            transition: width 0.3s ease;
+            z-index: 100;
+        }
+
+        /* Region badge */
+        .region-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .region-us {
+            background: rgba(0, 100, 200, 0.3);
+            border: 1px solid #0064c8;
+            color: #4da6ff;
+        }
+
+        .region-eu {
+            background: rgba(0, 150, 100, 0.3);
+            border: 1px solid #009664;
+            color: #4dffc3;
+        }
+
+        /* Mobileye Logo Styles */
+        .logo-large {
+            height: 80px;
+            margin-bottom: 60px;
+        }
+
+        .logo-small {
+            height: 30px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    
+    <div class="presentation">
+        <!-- Slide 1: Title -->
+        <div class="slide title-slide active">
+            <img src="https://www.assetbridge.app/api/assets/MobileyeFull/svg" alt="Mobileye" class="logo-large">
+            <h1>REM Validation Phases</h1>
+            <p class="subtitle">Road Experience Management - Quality Assurance Framework</p>
+            <p class="author">Created by Tzipi Walles | Last Modified: December 16, 2025</p>
+        </div>
+
+        <!-- Slide 2: Approval Phase Overview -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2>Approval Phase Overview</h2>
+            </div>
+            <div class="content">
+                <div class="phase-box">Pre-Continental Map Execution Phase</div>
+                <ul>
+                    <li>This phase runs <strong>after</strong> agreement on data and configuration for the map has been established</li>
+                    <li>Executed <strong>after</strong> Mepy version validation has been completed successfully</li>
+                    <li>Must be completed <strong>before</strong> starting continental map execution</li>
+                </ul>
+            </div>
+            <div class="slide-footer">
+                <img src="https://www.assetbridge.app/api/assets/MobileyeFull/svg" alt="Mobileye" class="logo-small">
+                <span class="page-number">2 / 8</span>
+            </div>
+        </div>
+
+        <!-- Slide 3: Current Maps Status -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2>Current Maps Status</h2>
+            </div>
+            <div class="content">
+                <p style="font-size: 1.3rem; color: #a0a0a0; margin-bottom: 30px;">
+                    Overview of active validation maps and their current configuration status
+                </p>
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <h3>US Maps</h3>
+                        <div class="metric">5</div>
+                        <p class="description">States under validation</p>
+                    </div>
+                    <div class="kpi-card">
+                        <h3>EU Maps</h3>
+                        <div class="metric">5</div>
+                        <p class="description">Countries under validation</p>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-footer">
+                <img src="https://www.assetbridge.app/api/assets/MobileyeFull/svg" alt="Mobileye" class="logo-small">
+                <span class="page-number">3 / 8</span>
+            </div>
+        </div>
+
+        <!-- Slide 4: US Plan -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2>US Validation Plan</h2>
+            </div>
+            <div class="content">
+                <span class="region-badge region-us">🇺🇸 United States Region</span>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>State</th>
+                                <th>Map Type</th>
+                                <th>Configuration</th>
+                                <th>Cells</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Florida</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                            <tr>
+                                <td>Michigan</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                            <tr>
+                                <td>New York</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                            <tr>
+                                <td>California</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                            <tr>
+                                <td>Texas</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="slide-footer">
+                <img src="https://www.assetbridge.app/api/assets/MobileyeFull/svg" alt="Mobileye" class="logo-small">
+                <span class="page-number">4 / 8</span>
+            </div>
+        </div>
+
+        <!-- Slide 5: EU Plan -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2>EU Validation Plan</h2>
+            </div>
+            <div class="content">
+                <span class="region-badge region-eu">🇪🇺 European Union Region</span>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Country</th>
+                                <th>Map Type</th>
+                                <th>Configuration</th>
+                                <th>Cells</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Germany</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                            <tr>
+                                <td>France</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                            <tr>
+                                <td>Italy</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                            <tr>
+                                <td>Spain</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                            <tr>
+                                <td>United Kingdom</td>
+                                <td>CM Map</td>
+                                <td>Same as Continental Map</td>
+                                <td>4 Cells</td>
+                                <td><span class="status-tbd">TBD</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="slide-footer">
+                <img src="https://www.assetbridge.app/api/assets/MobileyeFull/svg" alt="Mobileye" class="logo-small">
+                <span class="page-number">5 / 8</span>
+            </div>
+        </div>
+
+        <!-- Slide 6: Tools and Tests -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2>Tools and Tests</h2>
+            </div>
+            <div class="content">
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <h3>Creation Stat</h3>
+                        <p>Statistical analysis of map creation processes and validation metrics</p>
+                    </div>
+                    <div class="tool-card">
+                        <h3>SASA</h3>
+                        <p>Systematic Automated Safety Assessment for validation workflows</p>
+                    </div>
+                    <div class="tool-card">
+                        <h3>FPA SA</h3>
+                        <p>False Positive Analysis - Safety Assessment module</p>
+                    </div>
+                </div>
+                <div style="margin-top: 40px;">
+                    <p style="font-size: 1.2rem; color: #a0a0a0; text-align: center;">
+                        Tools are configured and deployed according to current and planned phase requirements
+                    </p>
+                </div>
+            </div>
+            <div class="slide-footer">
+                <img src="https://www.assetbridge.app/api/assets/MobileyeFull/svg" alt="Mobileye" class="logo-small">
+                <span class="page-number">6 / 8</span>
+            </div>
+        </div>
+
+        <!-- Slide 7: KPI Metrics -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2>Key Performance Indicators</h2>
+            </div>
+            <div class="content">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <h3>% Invalidation</h3>
+                        <div class="metric" style="color: #00d4ff;">—</div>
+                        <p class="description">Percentage of invalidated map segments during validation</p>
+                    </div>
+                    <div class="kpi-card">
+                        <h3>MTBF</h3>
+                        <div class="metric" style="color: #00d4ff;">—</div>
+                        <p class="description">Mean Time Between Failures - System reliability metric</p>
+                    </div>
+                </div>
+                <div style="margin-top: 50px; text-align: center;">
+                    <p style="font-size: 1.2rem; color: #666;">
+                        KPI targets and thresholds are defined per validation phase
+                    </p>
+                </div>
+            </div>
+            <div class="slide-footer">
+                <img src="https://www.assetbridge.app/api/assets/MobileyeFull/svg" alt="Mobileye" class="logo-small">
+                <span class="page-number">7 / 8</span>
+            </div>
+        </div>
+
+        <!-- Slide 8: Thank You -->
+        <div class="slide final-slide">
+            <img src="https://www.assetbridge.app/api/assets/MobileyeFull/svg" alt="Mobileye" class="logo-large">
+            <h2>Thank You</h2>
+            <p>REM Validation Phases - Ensuring Quality & Safety</p>
+            <p style="margin-top: 30px; font-size: 1rem; color: #666;">
+                For questions or updates, contact the REM Validation Team
+            </p>
+        </div>
+    </div>
+
+    <!-- Navigation Controls -->
+    <div class="nav-controls">
+        <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+        <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        const progressBar = document.getElementById('progressBar');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+
+            // Update progress bar
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            progressBar.style.width = progress + '%';
+
+            // Update buttons
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            currentSlide += direction;
+            if (currentSlide < 0) currentSlide = 0;
+            if (currentSlide >= totalSlides) currentSlide = totalSlides - 1;
+            updateSlide();
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                changeSlide(1);
+            } else if (e.key === 'ArrowLeft') {
+                changeSlide(-1);
+            } else if (e.key === 'Home') {
+                currentSlide = 0;
+                updateSlide();
+            } else if (e.key === 'End') {
+                currentSlide = totalSlides - 1;
+                updateSlide();
+            }
+        });
+
+        // Touch navigation for mobile
+        let touchStartX = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) {
+                    changeSlide(1);
+                } else {
+                    changeSlide(-1);
+                }
+            }
+        });
+
+        // Initialize
+        updateSlide();
+    </script>
+</body>
+</html>

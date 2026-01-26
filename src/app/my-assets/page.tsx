@@ -10,11 +10,6 @@ import {
   ArrowLeft, 
   Trash2, 
   Download, 
-  Copy, 
-  Check,
-  Globe,
-  Building2,
-  Lock,
   MoreVertical,
   Share2,
   Coffee
@@ -128,36 +123,6 @@ export default function MyAssetsPage() {
     }
   }
 
-  const handleVisibilityChange = async (assetId: string, visibility: Asset["visibility"]) => {
-    try {
-      const supabase = createClient()
-      
-      const { error } = await supabase
-        .from("assets")
-        .update({ visibility })
-        .eq("id", assetId)
-
-      if (error) throw error
-      
-      setAssets(assets.map(a => 
-        a.id === assetId ? { ...a, visibility } : a
-      ))
-      setMenuOpenId(null)
-    } catch (err) {
-      console.error("Update failed:", err)
-    }
-  }
-
-  const getVisibilityIcon = (visibility: Asset["visibility"]) => {
-    switch (visibility) {
-      case "public":
-        return <Globe className="h-4 w-4 text-emerald-400" />
-      case "organization":
-        return <Building2 className="h-4 w-4 text-blue-400" />
-      default:
-        return <Lock className="h-4 w-4 text-muted-foreground" />
-    }
-  }
 
   if (authLoading || (!user && !authLoading)) {
     return (
@@ -302,29 +267,7 @@ export default function MyAssetsPage() {
                             className="fixed inset-0 z-40"
                             onClick={() => setMenuOpenId(null)}
                           />
-                          <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-xl border border-border bg-card p-1 shadow-xl">
-                            <button
-                              onClick={() => handleVisibilityChange(asset.id, "private")}
-                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted ${asset.visibility === "private" ? "text-primary" : ""}`}
-                            >
-                              <Lock className="h-4 w-4" />
-                              Private
-                            </button>
-                            <button
-                              onClick={() => handleVisibilityChange(asset.id, "organization")}
-                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted ${asset.visibility === "organization" ? "text-primary" : ""}`}
-                            >
-                              <Building2 className="h-4 w-4" />
-                              Organization
-                            </button>
-                            <button
-                              onClick={() => handleVisibilityChange(asset.id, "public")}
-                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted ${asset.visibility === "public" ? "text-primary" : ""}`}
-                            >
-                              <Globe className="h-4 w-4" />
-                              Public
-                            </button>
-                            <hr className="my-1 border-border" />
+                          <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-xl border border-border bg-card p-1 shadow-xl">
                             <button
                               onClick={() => handleDelete(asset.id)}
                               disabled={deletingId === asset.id}
