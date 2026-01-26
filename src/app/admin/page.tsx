@@ -100,7 +100,9 @@ export default function AdminPage() {
       const response = await fetch("/api/feedback")
       
       if (!response.ok) {
-        console.error("Failed to fetch feedback:", response.status)
+        // Silently fail if feedback table doesn't exist yet
+        console.log("Feedback not available yet:", response.status)
+        setFeedback([])
         return
       }
 
@@ -109,7 +111,9 @@ export default function AdminPage() {
         setFeedback(result.data)
       }
     } catch (err) {
-      console.error("Failed to fetch feedback:", err)
+      // Silently fail - feedback feature is optional
+      console.log("Feedback not available:", err)
+      setFeedback([])
     } finally {
       setLoadingFeedback(false)
     }
