@@ -84,7 +84,7 @@ export async function GET() {
         user_agent,
         created_at,
         user_id,
-        profiles:user_id (email, name)
+        profiles:user_id (email, full_name)
       `)
       .order("created_at", { ascending: false })
 

@@ -44,7 +44,7 @@ interface Feedback {
   user_id: string | null
   profiles: {
     email: string
-    name: string | null
+    full_name: string | null
   } | null
 }
 
@@ -299,7 +299,7 @@ export default function AdminPage() {
                       {item.profiles ? (
                         <div className="flex items-center gap-2">
                           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-primary to-purple-600 text-xs font-semibold text-white">
-                            {(item.profiles.name || item.profiles.email)?.charAt(0).toUpperCase()}
+                            {(item.profiles.full_name || item.profiles.email)?.charAt(0).toUpperCase()}
                           </div>
                           <span className="text-sm font-medium">{item.profiles.email}</span>
                         </div>
