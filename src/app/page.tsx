@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
 import { UploadZone } from "@/components/upload-zone"
 import { SettingsPanel, OutputMode } from "@/components/settings-panel"
 import { ResultsPanel } from "@/components/results-panel"
@@ -42,18 +41,19 @@ export default function Home() {
   const [isSaving, setIsSaving] = useState(false)
   const [savedAssetId, setSavedAssetId] = useState<string | null>(null)
   
-  const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
   const { count: conversionCount, incrementCount, hasUsedFreeConversion, isLoaded: countLoaded } = useConversionCount()
   const { asset: brandLogo } = useSavedAsset(BRAND_LOGO_NAME)
   const { stats } = useStats()
 
-  // Open feedback modal if requested via URL
+  // Open feedback modal if requested via localStorage
   useEffect(() => {
-    if (searchParams.get("feedback") === "true") {
+    const shouldShowFeedback = localStorage.getItem("openFeedback")
+    if (shouldShowFeedback === "true") {
       setShowFeedbackModal(true)
+      localStorage.removeItem("openFeedback")
     }
-  }, [searchParams])
+  }, [])
   
   // Size limits differ by mode - icons are naturally smaller
   const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4MB (Vercel serverless limit is 4.5MB)
