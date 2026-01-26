@@ -74,18 +74,10 @@ export async function GET() {
       )
     }
 
-    // Fetch all feedback with user info
+    // Fetch all feedback
     const { data, error } = await supabase
       .from("feedback")
-      .select(`
-        id,
-        message,
-        email,
-        user_agent,
-        created_at,
-        user_id,
-        profiles:user_id (email, full_name)
-      `)
+      .select("*")
       .order("created_at", { ascending: false })
 
     if (error) {
