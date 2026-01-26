@@ -250,22 +250,6 @@ export default function Home() {
               AI Workflow Ready
             </span>
             
-            {/* Buy Me a Coffee Button */}
-            <Button 
-              variant="outline" 
-              className="gap-2 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300"
-              asChild
-            >
-              <a
-                href="https://buymeacoffee.com/tzipiw"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Coffee className="h-4 w-4" />
-                <span className="hidden sm:inline">Buy me a coffee</span>
-              </a>
-            </Button>
-            
             <Button variant="ghost" size="icon" className="rounded-xl" asChild>
               <a
                 href="https://github.com/tzipiwalles/iconify-react"
@@ -514,11 +498,23 @@ export default function Home() {
               <span className="font-medium text-foreground">{stats.totalAssets}</span> assets created
             </div>
           </div>
-          {/* Credit */}
-          <p className="text-center text-sm text-muted-foreground">
-            Built for AI coding workflows •{" "}
-            <span className="font-medium text-foreground">Asset-Bridge</span>
-          </p>
+          {/* Credit & Coffee */}
+          <div className="flex items-center justify-center gap-3">
+            <p className="text-sm text-muted-foreground">
+              Built for AI coding workflows •{" "}
+              <span className="font-medium text-foreground">Asset-Bridge</span>
+            </p>
+            <span className="text-muted-foreground">•</span>
+            <a
+              href="https://buymeacoffee.com/tzipiw"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              <Coffee className="h-4 w-4" />
+              <span>Buy me a coffee</span>
+            </a>
+          </div>
         </div>
       </footer>
 

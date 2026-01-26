@@ -11,8 +11,7 @@ import {
   Trash2, 
   Download, 
   MoreVertical,
-  Share2,
-  Coffee
+  Share2
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -156,26 +155,7 @@ export default function MyAssetsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Buy Me a Coffee Button */}
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="gap-2 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300"
-              asChild
-            >
-              <a
-                href="https://buymeacoffee.com/tzipiw"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Coffee className="h-4 w-4" />
-                <span className="hidden sm:inline">Buy me a coffee</span>
-              </a>
-            </Button>
-            
-            <UserMenu />
-          </div>
+          <UserMenu />
         </div>
       </header>
 
