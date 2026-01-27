@@ -9,7 +9,8 @@ import {
   ImageIcon, 
   Sparkles,
   Shield,
-  Coffee
+  Coffee,
+  Activity
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -44,13 +45,32 @@ interface Feedback {
   user_id: string | null
 }
 
+interface ApiUsageStats {
+  recentCalls: Array<{
+    id: string
+    endpoint: string
+    method: string
+    created_at: string
+    user_id: string | null
+    ip_address: string
+    response_time_ms: number | null
+  }>
+  summary: {
+    totalCalls: number
+    last24h: number
+    last7days: number
+  }
+}
+
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [data, setData] = useState<AdminData | null>(null)
   const [feedback, setFeedback] = useState<Feedback[]>([])
+  const [apiUsage, setApiUsage] = useState<ApiUsageStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingFeedback, setLoadingFeedback] = useState(true)
+  const [loadingApiUsage, setLoadingApiUsage] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -63,6 +83,7 @@ export default function AdminPage() {
     if (user) {
       fetchAdminData()
       fetchFeedback()
+      fetchApiUsage()
     }
   }, [user])
 
@@ -112,6 +133,27 @@ export default function AdminPage() {
       setFeedback([])
     } finally {
       setLoadingFeedback(false)
+    }
+  }
+
+  const fetchApiUsage = async () => {
+    try {
+      setLoadingApiUsage(true)
+      const response = await fetch("/api/admin/api-usage")
+      
+      if (!response.ok) {
+        console.log("API usage not available yet:", response.status)
+        return
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setApiUsage(result.data)
+      }
+    } catch (err) {
+      console.log("API usage not available:", err)
+    } finally {
+      setLoadingApiUsage(false)
     }
   }
 
@@ -217,6 +259,47 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* API Usage Stats */}
+        {!loadingApiUsage && apiUsage && (
+          <div className="mb-8 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-500/10">
+                  <Activity className="h-6 w-6 text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total API Calls</p>
+                  <p className="text-3xl font-bold">{apiUsage.summary.totalCalls}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10">
+                  <Activity className="h-6 w-6 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Last 24 Hours</p>
+                  <p className="text-3xl font-bold">{apiUsage.summary.last24h}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10">
+                  <Activity className="h-6 w-6 text-cyan-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Last 7 Days</p>
+                  <p className="text-3xl font-bold">{apiUsage.summary.last7days}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Users Table */}
         <div className="rounded-2xl border border-border bg-card">
           <div className="border-b border-border p-4">
@@ -280,6 +363,51 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+
+        {/* Recent API Calls Section */}
+        {!loadingApiUsage && apiUsage && apiUsage.recentCalls.length > 0 && (
+          <div className="mb-8 overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="border-b border-border/50 bg-muted/30 px-6 py-4">
+              <h2 className="text-lg font-semibold">Recent API Calls</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Last {apiUsage.recentCalls.length} API requests
+              </p>
+            </div>
+
+            <div className="divide-y divide-border">
+              {apiUsage.recentCalls.slice(0, 20).map((call) => (
+                <div key={call.id} className="p-4 hover:bg-muted/20 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-semibold">{call.method}</span>
+                        <code className="rounded bg-muted px-2 py-0.5 text-xs">{call.endpoint}</code>
+                        {call.response_time_ms && (
+                          <span className="text-xs text-muted-foreground">
+                            {call.response_time_ms}ms
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>{call.ip_address}</span>
+                        <span>•</span>
+                        <span>{call.user_id ? "Authenticated" : "Anonymous"}</span>
+                      </div>
+                    </div>
+                    <time className="text-xs text-muted-foreground">
+                      {new Date(call.created_at).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </time>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Feedback Section */}
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
