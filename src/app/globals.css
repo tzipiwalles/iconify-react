@@ -128,3 +128,71 @@
 ::selection {
   background: hsl(var(--primary) / 0.3);
 }
+
+/* ==========================================
+   Mobile Optimizations
+   ========================================== */
+
+/* Prevent iOS zoom on input focus */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Better touch targets for mobile */
+@media (hover: none) and (pointer: coarse) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Fix iOS momentum scrolling */
+.overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent text selection on touch */
+.no-select {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Fix 100vh on mobile browsers */
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Hide scrollbar on mobile but keep functionality */
+@media screen and (max-width: 768px) {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Improve tap highlight color */
+* {
+  -webkit-tap-highlight-color: hsl(var(--primary) / 0.2);
+}
+
+/* Fix code blocks on mobile - horizontal scroll */
+pre, code {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Responsive text */
+@media screen and (max-width: 640px) {
+  .responsive-text-sm {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+}

@@ -113,14 +113,23 @@ export function UploadZone({
     )
   }
 
+  // Detect if device is touch-only (mobile)
+  const isTouchDevice = typeof window !== "undefined" && 
+    ("ontouchstart" in window || navigator.maxTouchPoints > 0)
+
   return (
     <div
       onClick={handleClick}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onTouchEnd={(e) => {
+        // Prevent double-tap zoom on mobile
+        e.preventDefault()
+        handleClick()
+      }}
       className={cn(
-        "group relative cursor-pointer rounded-xl border-2 border-dashed p-10 text-center transition-all duration-300",
+        "group relative cursor-pointer rounded-xl border-2 border-dashed p-6 sm:p-10 text-center transition-all duration-300 active:scale-[0.99]",
         isDragging
           ? "border-primary bg-primary/5 scale-[1.01]"
           : "border-border hover:border-primary/40 hover:bg-muted/30"
@@ -132,12 +141,14 @@ export function UploadZone({
         accept={ACCEPTED_EXTENSIONS.join(",")}
         onChange={handleFileInput}
         className="hidden"
+        // Important for mobile file selection
+        capture={undefined}
       />
 
-      <div className="flex flex-col items-center gap-5">
+      <div className="flex flex-col items-center gap-4 sm:gap-5">
         <div
           className={cn(
-            "flex h-16 w-16 items-center justify-center rounded-2xl transition-all duration-300",
+            "flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl transition-all duration-300",
             isDragging
               ? "bg-primary/15 scale-110"
               : "bg-muted/80 group-hover:bg-primary/10"
@@ -145,18 +156,18 @@ export function UploadZone({
         >
           <Upload
             className={cn(
-              "h-7 w-7 transition-colors",
+              "h-6 w-6 sm:h-7 sm:w-7 transition-colors",
               isDragging ? "text-primary" : "text-muted-foreground group-hover:text-primary"
             )}
           />
         </div>
 
         <div>
-          <p className="text-lg font-semibold text-foreground">
-            {isDragging ? "Drop your file here" : "Drag & drop your asset"}
+          <p className="text-base sm:text-lg font-semibold text-foreground">
+            {isDragging ? "Drop your file here" : isTouchDevice ? "Tap to select image" : "Drag & drop your asset"}
           </p>
-          <p className="mt-1.5 text-sm font-medium text-muted-foreground">
-            or click to browse • PNG, JPG, SVG
+          <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm font-medium text-muted-foreground">
+            {isTouchDevice ? "PNG, JPG, or SVG" : "or click to browse • PNG, JPG, SVG"}
           </p>
         </div>
 
@@ -164,7 +175,7 @@ export function UploadZone({
           {["PNG", "JPG", "SVG"].map((format) => (
             <span
               key={format}
-              className="rounded-lg bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground"
+              className="rounded-lg bg-muted px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold text-muted-foreground"
             >
               {format}
             </span>

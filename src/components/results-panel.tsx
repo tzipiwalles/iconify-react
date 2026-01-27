@@ -75,7 +75,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
 
   if (!result) {
     return (
-      <div className="flex h-[400px] items-center justify-center rounded-xl border border-dashed border-muted-foreground/25 bg-muted/30">
+      <div className="flex min-h-[250px] sm:min-h-[400px] items-center justify-center rounded-xl border border-dashed border-muted-foreground/25 bg-muted/30">
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
             <Eye className="h-8 w-8 text-muted-foreground" />
@@ -98,28 +98,29 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
   return (
     <div className="rounded-xl border border-border bg-card">
       <Tabs defaultValue="preview" className="w-full">
-        <div className="flex items-center justify-between border-b border-border px-4">
-          <TabsList className="h-14 bg-transparent">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border px-2 sm:px-4">
+          <TabsList className="h-12 sm:h-14 bg-transparent w-full sm:w-auto overflow-x-auto hide-scrollbar">
             <TabsTrigger
               value="preview"
-              className="gap-2 data-[state=active]:bg-muted"
+              className="gap-1.5 sm:gap-2 data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3"
             >
-              <Eye className="h-4 w-4" />
-              Preview
+              <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Preview</span>
             </TabsTrigger>
             <TabsTrigger
               value="component"
-              className="gap-2 data-[state=active]:bg-muted"
+              className="gap-1.5 sm:gap-2 data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3"
             >
-              <Code2 className="h-4 w-4" />
-              React Component
+              <Code2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">React</span>
+              <span className="sm:hidden">TSX</span>
             </TabsTrigger>
             <TabsTrigger
               value="svg"
-              className="gap-2 data-[state=active]:bg-muted"
+              className="gap-1.5 sm:gap-2 data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3"
             >
               <svg
-                className="h-4 w-4"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -129,7 +130,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                 <path d="M2 17l10 5 10-5" />
                 <path d="M2 12l10 5 10-5" />
               </svg>
-              SVG Code
+              SVG
             </TabsTrigger>
           </TabsList>
 

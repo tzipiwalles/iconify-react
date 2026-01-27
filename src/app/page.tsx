@@ -265,12 +265,12 @@ export default function Home() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="flex items-center gap-3.5">
+        <div className="mx-auto flex h-14 sm:h-16 max-w-7xl items-center justify-between px-3 sm:px-6">
+          <div className="flex items-center gap-2 sm:gap-3.5">
             <div className={`flex items-center justify-center rounded-xl shadow-lg overflow-hidden ${
               brandLogo?.svgUrl 
-                ? "h-12 w-12 bg-black p-1" 
-                : "h-10 w-10 bg-gradient-to-br from-primary to-purple-600 shadow-primary/20"
+                ? "h-9 w-9 sm:h-12 sm:w-12 bg-black p-0.5 sm:p-1" 
+                : "h-8 w-8 sm:h-10 sm:w-10 bg-gradient-to-br from-primary to-purple-600 shadow-primary/20"
             }`}>
               {brandLogo?.svgUrl ? (
                 <img 
@@ -279,32 +279,32 @@ export default function Home() {
                   className="h-full w-full object-contain"
                 />
               ) : (
-                <Zap className="h-5 w-5 text-white" />
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               )}
             </div>
             <div>
-              <div className="text-lg font-bold tracking-tight">
+              <div className="text-base sm:text-lg font-bold tracking-tight">
                 Asset-Bridge
               </div>
-              <p className="text-[11px] font-medium text-muted-foreground">
+              <p className="hidden sm:block text-[11px] font-medium text-muted-foreground">
                 Host Images for AI Previews
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 sm:inline-flex">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <span className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 lg:inline-flex">
               <Sparkles className="h-3 w-3" />
               AI Workflow Ready
             </span>
             
-            <Button variant="ghost" size="icon" className="rounded-xl" asChild>
+            <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 sm:h-10 sm:w-10" asChild>
               <a
                 href="https://github.com/tzipiwalles/iconify-react"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Github className="h-5 w-5" />
+                <Github className="h-4 w-4 sm:h-5 sm:w-5" />
               </a>
             </Button>
             
@@ -316,10 +316,12 @@ export default function Home() {
                 <Button
                   onClick={() => setShowAuthModal(true)}
                   variant="outline"
-                  className="gap-2 rounded-xl"
+                  size="sm"
+                  className="gap-1.5 sm:gap-2 rounded-xl text-xs sm:text-sm px-2.5 sm:px-4"
                 >
-                  <LogIn className="h-4 w-4" />
-                  Sign in
+                  <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden xs:inline">Sign in</span>
+                  <span className="xs:hidden">Login</span>
                 </Button>
               )
             )}
@@ -328,7 +330,7 @@ export default function Home() {
       </header>
 
       {/* Main content */}
-      <main className="mx-auto max-w-7xl px-6 py-6">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-4 sm:py-6">
         <div className="mb-6 text-center">
           <h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
             Use Your Real Custom Logo in{" "}
@@ -341,7 +343,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr,380px]">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr,380px]">
           {/* Left column - Upload and Results */}
           <div className="space-y-4">
             <UploadZone
