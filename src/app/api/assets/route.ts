@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { trackApiUsage } from "@/lib/api-usage"
 
 // GET /api/assets - List public assets (shared library)
 export async function GET(request: Request) {
+  const startTime = Date.now()
+  
   try {
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
@@ -26,6 +29,17 @@ export async function GET(request: Request) {
 
     if (error) throw error
 
+    const responseTimeMs = Date.now() - startTime
+
+    // Track API usage (non-blocking)
+    trackApiUsage(request, {
+      endpoint: "/api/assets",
+      method: "GET",
+      queryParams: Object.fromEntries(searchParams),
+      statusCode: 200,
+      responseTimeMs,
+    })
+
     return NextResponse.json({
       success: true,
       data: assets || [],
@@ -37,6 +51,17 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error("Error listing assets:", error)
+    
+    const responseTimeMs = Date.now() - startTime
+    
+    // Track failed request
+    trackApiUsage(request, {
+      endpoint: "/api/assets",
+      method: "GET",
+      statusCode: 500,
+      responseTimeMs,
+    })
+    
     return NextResponse.json(
       { success: false, error: "Failed to list assets" },
       { status: 500 }
