@@ -58,9 +58,11 @@ export default function MyAssetsPage() {
       setLoading(true)
       const supabase = createClient()
       
+      // Only load assets belonging to the current user
       const { data, error } = await supabase
         .from("assets")
         .select("*")
+        .eq("user_id", user!.id)  // 🔒 Filter by user_id
         .order("created_at", { ascending: false })
 
       if (error) throw error
