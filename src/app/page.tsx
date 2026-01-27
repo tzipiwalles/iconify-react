@@ -331,13 +331,13 @@ export default function Home() {
       <main className="mx-auto max-w-7xl px-6 py-6">
         <div className="mb-6 text-center">
           <h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
-            Fix Broken Images in{" "}
+            Use Your Real Custom Logo in{" "}
             <span className="bg-gradient-to-r from-primary via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
-              Claude Artifacts & Cursor AI
+              AI Previews
             </span>
           </h1>
           <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Stop seeing broken image icons in AI previews. Host your custom logos & local assets instantly — get permanent links for Claude Artifacts, Cursor Composer, ChatGPT Canvas & Base44.
+            Stop seeing broken image icons. Host your custom logos & local assets instantly — get permanent links for Claude Artifacts, Cursor Composer, ChatGPT Canvas & Base44.
           </p>
         </div>
 
