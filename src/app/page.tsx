@@ -283,11 +283,11 @@ export default function Home() {
               )}
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight">
+              <div className="text-lg font-bold tracking-tight">
                 Asset-Bridge
-              </h1>
+              </div>
               <p className="text-[11px] font-medium text-muted-foreground">
-                Image → React Component
+                Host Images for AI Previews
               </p>
             </div>
           </div>
@@ -330,15 +330,14 @@ export default function Home() {
       {/* Main content */}
       <main className="mx-auto max-w-7xl px-6 py-6">
         <div className="mb-6 text-center">
-          <h2 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
-            Transform Assets into{" "}
+          <h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
+            Fix Broken Images in{" "}
             <span className="bg-gradient-to-r from-primary via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
-              React Components
+              Claude Artifacts & Cursor AI
             </span>
-          </h2>
+          </h1>
           <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Upload your images or SVGs and get optimized, AI-friendly React
-            components — ready for any coding workflow.
+            Stop seeing broken image icons in AI previews. Host your custom logos & local assets instantly — get permanent links for Claude Artifacts, Cursor Composer, ChatGPT Canvas & Base44.
           </p>
         </div>
 
