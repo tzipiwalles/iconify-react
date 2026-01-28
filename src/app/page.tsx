@@ -13,6 +13,7 @@ import { useStats } from "@/hooks/use-stats"
 import { AuthModal } from "@/components/auth-modal"
 import { FeedbackModal } from "@/components/feedback-modal"
 import { UserMenu } from "@/components/user-menu"
+import { ToolCompatibility } from "@/components/tool-compatibility"
 import { createClient } from "@/lib/supabase/client"
 import { trackEvent } from "@/lib/track-event"
 
@@ -560,6 +561,11 @@ export default function Home() {
               </ul>
             </div>
           </div>
+        </div>
+
+        {/* Tool Compatibility Section */}
+        <div className="mx-auto mt-12 max-w-4xl">
+          <ToolCompatibility />
         </div>
       </main>
 
