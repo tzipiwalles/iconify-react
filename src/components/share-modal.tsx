@@ -207,8 +207,8 @@ useEffect(() => {
                 </div>
               )}
               
-              <pre className="overflow-x-auto rounded-lg bg-black/50 p-3 text-xs text-gray-300 whitespace-pre-wrap">
-                <code>{option.code.length > 500 ? option.code.slice(0, 500) + "..." : option.code}</code>
+              <pre className="overflow-x-auto rounded-lg bg-black/50 p-3 text-xs text-gray-300 whitespace-pre-wrap max-h-64 overflow-y-auto">
+                <code>{option.code}</code>
               </pre>
             </div>
           ))}
