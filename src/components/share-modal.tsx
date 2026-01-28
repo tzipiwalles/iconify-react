@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { X, Copy, Check, Code, Image, Globe, Link as LinkIcon, Sparkles, Palette, Wand2 } from "lucide-react"
 
@@ -17,11 +17,28 @@ interface ShareModalProps {
   baseUrl: string
 }
 
-type CopyType = "url" | "img" | "react" | "html" | "prompt" | "claude-artifacts" | null
+type CopyType = "url" | "img" | "react" | "html" | "prompt" | "claude-artifacts" | "data-url" | null
 
 export function ShareModal({ isOpen, onClose, asset, baseUrl }: ShareModalProps) {
   const [copied, setCopied] = useState<CopyType>(null)
   const [includeColors, setIncludeColors] = useState(false)
+  const [svgDataUrl, setSvgDataUrl] = useState<string | null>(null)
+  const [rawSvg, setRawSvg] = useState<string | null>(null)
+
+  // Fetch SVG and convert to data URL for Claude Artifacts
+  useEffect(() => {
+    if (asset.svg_url) {
+      fetch(asset.svg_url)
+        .then(res => res.text())
+        .then(svg => {
+          setRawSvg(svg)
+          // Convert to base64 data URL
+          const base64 = btoa(unescape(encodeURIComponent(svg)))
+          setSvgDataUrl(`data:image/svg+xml;base64,${base64}`)
+        })
+        .catch(err => console.error("Failed to fetch SVG:", err))
+    }
+  }, [asset.svg_url])
 
   if (!isOpen) return null
 
@@ -50,18 +67,14 @@ Example usage in React/HTML:
 DO NOT generate or create the logo as inline SVG.
 ALWAYS use the URL above - it's hosted and publicly accessible.${colorsSection}`
 
-  // Claude Artifacts specific prompt (uses inline SVG because Artifacts blocks external URLs)
-  const claudeArtifactsPrompt = `⚠️ IMPORTANT: Claude Artifacts blocks external image URLs. Use the INLINE SVG below instead.
+  // Claude Artifacts specific prompt (uses data URL because Artifacts blocks external URLs)
+  const claudeArtifactsPrompt = svgDataUrl 
+    ? `For my "${asset.component_name}" logo in Claude Artifacts, use this DATA URL (external URLs don't work in Artifacts):
 
-When generating code that needs my "${asset.component_name}" logo/icon, use this React component with inline SVG:
+<img src="${svgDataUrl}" alt="${asset.component_name}" width="48" height="48" />
 
-${asset.react_component}
-
-Usage example:
-<${asset.component_name} className="w-12 h-12" />
-
-DO NOT use external image URLs - they won't work in Claude Artifacts.
-ALWAYS use the inline SVG component above.${colorsSection}`
+Copy this exact img tag - the logo is embedded in the data URL.${colorsSection}`
+    : "Loading SVG..."
 
   const embedOptions = [
     {
@@ -73,13 +86,12 @@ ALWAYS use the inline SVG component above.${colorsSection}`
     },
     {
       id: "claude-artifacts" as CopyType,
-      title: "Claude Artifacts Prompt",
-      description: "With inline SVG (works in Artifacts!)",
+      title: "Claude Artifacts",
+      description: svgDataUrl ? "Data URL - works in Artifacts!" : "Loading...",
       icon: Wand2,
       code: claudeArtifactsPrompt,
       highlight: true,
       hasColorToggle: true,
-      isClaudeArtifacts: true,
     },
     {
       id: "prompt" as CopyType,
