@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { X, Copy, Check, Code, Image, Globe, Link as LinkIcon, Sparkles } from "lucide-react"
+import { X, Copy, Check, Code, Image, Globe, Link as LinkIcon, Sparkles, Palette } from "lucide-react"
 
 interface ShareModalProps {
   isOpen: boolean
@@ -12,6 +12,7 @@ interface ShareModalProps {
     react_component: string
     svg_url: string
     visibility: string
+    detected_colors?: string[]
   }
   baseUrl: string
 }
@@ -20,12 +21,24 @@ type CopyType = "url" | "img" | "react" | "html" | "prompt" | null
 
 export function ShareModal({ isOpen, onClose, asset, baseUrl }: ShareModalProps) {
   const [copied, setCopied] = useState<CopyType>(null)
+  const [includeColors, setIncludeColors] = useState(false)
 
   if (!isOpen) return null
 
   // All assets are public in MVP
   const svgEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg`
   const jsonEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}`
+
+  // Format colors for the prompt
+  const hasColors = asset.detected_colors && asset.detected_colors.length > 0
+  const colorsSection = hasColors && includeColors ? `
+
+🎨 BRAND COLORS (use these exact colors for consistency):
+${asset.detected_colors!.map((color, i) => `  ${i + 1}. ${color}`).join('\n')}
+
+When styling buttons, backgrounds, text, or accents, use ONLY these brand colors.
+CSS variables you can use:
+${asset.detected_colors!.map((color, i) => `  --brand-color-${i + 1}: ${color};`).join('\n')}` : ''
 
   // AI Prompt content
   const aiPromptContent = `When generating code that needs my "${asset.component_name}" logo/icon, use this image URL:
@@ -35,7 +48,7 @@ Example usage in React/HTML:
 <img src="${svgEndpoint}" alt="${asset.component_name}" />
 
 DO NOT generate or create the logo as inline SVG.
-ALWAYS use the URL above - it's hosted and publicly accessible.`
+ALWAYS use the URL above - it's hosted and publicly accessible.${colorsSection}`
 
   const embedOptions = [
     {
@@ -48,10 +61,11 @@ ALWAYS use the URL above - it's hosted and publicly accessible.`
     {
       id: "prompt" as CopyType,
       title: "AI Prompt",
-      description: "For Claude, ChatGPT, Cursor",
+      description: includeColors && hasColors ? "With brand colors" : "For Claude, ChatGPT, Cursor",
       icon: Sparkles,
       code: aiPromptContent,
       highlight: true,
+      hasColorToggle: true,
     },
     {
       id: "img" as CopyType,
@@ -160,6 +174,39 @@ useEffect(() => {
                   )}
                 </Button>
               </div>
+              
+              {/* Color toggle for AI Prompt */}
+              {option.hasColorToggle && hasColors && (
+                <div className="mb-3 flex items-center justify-between rounded-lg bg-black/30 p-3">
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-purple-400" />
+                    <span className="text-sm text-purple-300">Include brand colors in prompt</span>
+                    <div className="flex gap-1 ml-2">
+                      {asset.detected_colors!.slice(0, 4).map((color, i) => (
+                        <div
+                          key={i}
+                          className="h-4 w-4 rounded-full border border-white/20"
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIncludeColors(!includeColors)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      includeColors ? "bg-purple-500" : "bg-muted"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${
+                        includeColors ? "left-6" : "left-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
+              
               <pre className="overflow-x-auto rounded-lg bg-black/50 p-3 text-xs text-gray-300 whitespace-pre-wrap">
                 <code>{option.code.length > 500 ? option.code.slice(0, 500) + "..." : option.code}</code>
               </pre>
