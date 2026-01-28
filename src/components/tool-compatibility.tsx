@@ -259,6 +259,11 @@ export function ToolCompatibility() {
   )
 }
 
+// Tooltips for specific tools that don't work
+const toolTooltips: Record<string, string> = {
+  "Claude Artifacts": "Blocked by Anthropic's security policy. Use inside Cursor via Claude instead.",
+}
+
 // Separate component for tool card
 function ToolCard({
   tool,
@@ -273,6 +278,8 @@ function ToolCard({
   getStatusBadge: (tool: Tool) => JSX.Element
   getCategoryLabel: (category: string) => string
 }) {
+  const tooltip = toolTooltips[tool.name]
+  
   return (
     <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3">
       <div className="flex items-center gap-3">
@@ -292,6 +299,12 @@ function ToolCard({
               </a>
             )}
           </div>
+          {/* Tooltip for tools that don't work */}
+          {tooltip && tool.works === false && (
+            <p className="mt-1 text-[10px] text-muted-foreground/70 italic max-w-[180px]">
+              {tooltip}
+            </p>
+          )}
         </div>
       </div>
 
