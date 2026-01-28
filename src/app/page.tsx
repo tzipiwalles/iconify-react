@@ -565,13 +565,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tool Compatibility Section */}
-        <div className="mx-auto mt-12 max-w-4xl">
-          <ToolCompatibility />
-        </div>
-
         {/* Showcase Section - Social Proof */}
-        <div className="mx-auto mt-16 max-w-6xl">
+        <div className="mx-auto mt-12 max-w-6xl">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold sm:text-3xl">
               Works flawlessly with your favorite AI tools
@@ -601,32 +596,42 @@ export default function Home() {
                 </div>
               </button>
               <div className="p-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <img 
+                    src="https://www.assetbridge.app/api/assets/Blossomco/svg" 
+                    alt="Blossomco logo" 
+                    className="h-5 w-5"
+                  />
                   Brand assets integrated perfectly into marketing designs.
                 </p>
               </div>
             </div>
 
-            {/* Card 2 - Google Gemini */}
+            {/* Card 2 - Google AI Studio */}
             <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
               <button
-                onClick={() => setLightboxImage({ src: "/showcase/gemini-dashboard.png", alt: "Smart home dashboard created in Google Gemini with Asset-Bridge logo" })}
+                onClick={() => setLightboxImage({ src: "/showcase/gemini-dashboard.png", alt: "Smart home dashboard created in Google AI Studio with Asset-Bridge logo" })}
                 className="relative aspect-[4/3] w-full overflow-hidden bg-muted cursor-zoom-in"
               >
                 <Image
                   src="/showcase/gemini-dashboard.png"
-                  alt="Smart home dashboard created in Google Gemini with Asset-Bridge logo"
+                  alt="Smart home dashboard created in Google AI Studio with Asset-Bridge logo"
                   fill
                   className="object-cover object-top transition-transform group-hover:scale-105"
                 />
                 <div className="absolute top-3 left-3">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white">
-                    <span className="text-blue-400">●</span> Google Gemini
+                    <span className="text-blue-400">●</span> Google AI Studio
                   </span>
                 </div>
               </button>
               <div className="p-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <img 
+                    src="https://www.assetbridge.app/api/assets/NexusOS/svg" 
+                    alt="NexusOS logo" 
+                    className="h-5 w-5"
+                  />
                   Live SaaS dashboards generated with dark mode logos.
                 </p>
               </div>
@@ -651,12 +656,22 @@ export default function Home() {
                 </div>
               </button>
               <div className="p-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <img 
+                    src="https://www.assetbridge.app/api/assets/Blossomco/svg" 
+                    alt="Blossomco logo" 
+                    className="h-5 w-5"
+                  />
                   Full e-commerce sites built instantly with custom branding.
                 </p>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Tool Compatibility Section */}
+        <div className="mx-auto mt-16 max-w-4xl">
+          <ToolCompatibility />
         </div>
       </main>
 
