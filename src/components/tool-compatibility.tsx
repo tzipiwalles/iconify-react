@@ -282,11 +282,21 @@ function ToolCard({
   const tooltip = toolTooltips[tool.name]
   const [logoError, setLogoError] = useState(false)
   
+  // Logos that need to be white (black logos)
+  const whiteLogos = ['github', 'cursor', 'anthropic', 'codeium', 'replit']
+  
+  // Check if this logo needs to be white
+  const needsWhite = tool.icon_slug 
+    ? tool.icon_slug.startsWith('http') || whiteLogos.includes(tool.icon_slug)
+    : false
+  
   // Check if icon_slug is a full URL or a Simple Icons slug
   const logoUrl = tool.icon_slug
     ? tool.icon_slug.startsWith('http')
       ? tool.icon_slug
-      : `https://cdn.simpleicons.org/${tool.icon_slug}/white`
+      : needsWhite
+        ? `https://cdn.simpleicons.org/${tool.icon_slug}/white`
+        : `https://cdn.simpleicons.org/${tool.icon_slug}`
     : null
   
   return (
@@ -298,7 +308,7 @@ function ToolCard({
             src={logoUrl}
             alt={`${tool.name} logo`}
             className="h-6 w-6"
-            style={{ filter: logoUrl.startsWith('http') ? 'brightness(0) invert(1)' : 'none' }}
+            style={{ filter: tool.icon_slug?.startsWith('http') ? 'brightness(0) invert(1)' : 'none' }}
             onError={() => setLogoError(true)}
           />
         ) : (
