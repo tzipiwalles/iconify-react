@@ -10,7 +10,10 @@ import {
   Sparkles,
   Shield,
   Coffee,
-  Activity
+  Activity,
+  Zap,
+  Target,
+  TrendingUp
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -62,15 +65,28 @@ interface ApiUsageStats {
   }
 }
 
+interface EventStats {
+  summary: {
+    generateClicks: number
+    generateSuccess: number
+    saveAssets: number
+    uniqueGenerateUsers: number
+    todayGenerates: number
+    conversionRate: number
+  }
+}
+
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [data, setData] = useState<AdminData | null>(null)
   const [feedback, setFeedback] = useState<Feedback[]>([])
   const [apiUsage, setApiUsage] = useState<ApiUsageStats | null>(null)
+  const [eventStats, setEventStats] = useState<EventStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingFeedback, setLoadingFeedback] = useState(true)
   const [loadingApiUsage, setLoadingApiUsage] = useState(true)
+  const [loadingEvents, setLoadingEvents] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -84,6 +100,7 @@ export default function AdminPage() {
       fetchAdminData()
       fetchFeedback()
       fetchApiUsage()
+      fetchEventStats()
     }
   }, [user])
 
@@ -154,6 +171,27 @@ export default function AdminPage() {
       console.log("API usage not available:", err)
     } finally {
       setLoadingApiUsage(false)
+    }
+  }
+
+  const fetchEventStats = async () => {
+    try {
+      setLoadingEvents(true)
+      const response = await fetch("/api/admin/events")
+      
+      if (!response.ok) {
+        console.log("Event stats not available yet:", response.status)
+        return
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setEventStats(result.data)
+      }
+    } catch (err) {
+      console.log("Event stats not available:", err)
+    } finally {
+      setLoadingEvents(false)
     }
   }
 
@@ -258,6 +296,77 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+
+        {/* User Engagement Stats - Generate Clicks */}
+        {!loadingEvents && eventStats && (
+          <div className="mb-8">
+            <h2 className="mb-4 text-lg font-semibold flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              User Engagement
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-500/10">
+                    <Zap className="h-6 w-6 text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Generate Clicks</p>
+                    <p className="text-3xl font-bold">{eventStats.summary.generateClicks}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10">
+                    <Sparkles className="h-6 w-6 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Successful</p>
+                    <p className="text-3xl font-bold">{eventStats.summary.generateSuccess}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10">
+                    <Users className="h-6 w-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Unique Users</p>
+                    <p className="text-3xl font-bold">{eventStats.summary.uniqueGenerateUsers}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10">
+                    <Activity className="h-6 w-6 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Today</p>
+                    <p className="text-3xl font-bold">{eventStats.summary.todayGenerates}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
+                    <TrendingUp className="h-6 w-6 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Success Rate</p>
+                    <p className="text-3xl font-bold">{eventStats.summary.conversionRate}%</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* API Usage Stats */}
         {!loadingApiUsage && apiUsage && (

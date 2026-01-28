@@ -14,6 +14,7 @@ import { AuthModal } from "@/components/auth-modal"
 import { FeedbackModal } from "@/components/feedback-modal"
 import { UserMenu } from "@/components/user-menu"
 import { createClient } from "@/lib/supabase/client"
+import { trackEvent } from "@/lib/track-event"
 
 // Brand logo component name - change this to use a different saved logo
 const BRAND_LOGO_NAME = "ABmini"
@@ -132,6 +133,14 @@ export default function Home() {
       return
     }
 
+    // 📊 Track generate button click
+    trackEvent("generate_click", {
+      mode,
+      fileType: selectedFile.type,
+      fileSize: selectedFile.size,
+      componentName: componentName || undefined,
+    })
+
     setIsProcessing(true)
     setError(null)
     setSavedAssetId(null)
@@ -178,12 +187,28 @@ export default function Home() {
 
       setResult(data.data)
       
+      // 📊 Track successful generation
+      trackEvent("generate_success", {
+        mode,
+        fileType: selectedFile.type,
+        fileSize: selectedFile.size,
+      })
+      
       // Increment conversion count for anonymous users
       if (!user) {
         incrementCount()
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const errorMessage = err instanceof Error ? err.message : "An error occurred"
+      setError(errorMessage)
+      
+      // 📊 Track generation error
+      trackEvent("generate_error", {
+        mode,
+        fileType: selectedFile.type,
+        fileSize: selectedFile.size,
+        error: errorMessage,
+      })
     } finally {
       setIsProcessing(false)
     }
@@ -246,6 +271,12 @@ export default function Home() {
       if (dbError) throw dbError
 
       setSavedAssetId(asset.id)
+      
+      // 📊 Track save asset
+      trackEvent("save_asset", {
+        mode,
+        componentName: result.componentName,
+      })
     } catch (err) {
       console.error("Save error:", err)
       setError(err instanceof Error ? err.message : "Failed to save asset")
