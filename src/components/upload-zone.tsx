@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useCallback, useState } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { Upload, FileImage, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -22,7 +22,13 @@ export function UploadZone({
   isProcessing,
 }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const [isTouchDevice, setIsTouchDevice] = useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
+
+  // Detect touch device only on client to avoid hydration mismatch
+  useEffect(() => {
+    setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0)
+  }, [])
 
   const validateFile = useCallback((file: File): boolean => {
     const isValidType = ACCEPTED_TYPES.includes(file.type)
@@ -112,10 +118,6 @@ export function UploadZone({
       </div>
     )
   }
-
-  // Detect if device is touch-only (mobile)
-  const isTouchDevice = typeof window !== "undefined" && 
-    ("ontouchstart" in window || navigator.maxTouchPoints > 0)
 
   return (
     <div
