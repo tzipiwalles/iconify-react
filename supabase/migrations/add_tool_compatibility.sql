@@ -54,11 +54,11 @@ DROP POLICY IF EXISTS "Anyone can view tools" ON ai_tools;
 CREATE POLICY "Anyone can view tools" ON ai_tools
   FOR SELECT USING (true);
 
--- Only admin can modify tools directly
+-- Only admin can modify tools directly (check by email)
 DROP POLICY IF EXISTS "Admin can manage tools" ON ai_tools;
 CREATE POLICY "Admin can manage tools" ON ai_tools
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    auth.jwt() ->> 'email' = 'tzipi.walles@gmail.com'
   );
 
 -- Anyone can add a tool (for user suggestions)

@@ -1,11 +1,10 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
+import { createClient } from "@/lib/supabase/server"
 import { NextRequest, NextResponse } from "next/server"
 
 // GET - Fetch all tools with vote counts
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = await createClient()
 
     // Use the function to get tools with vote stats
     const { data, error } = await supabase.rpc("get_tool_stats")
@@ -45,7 +44,7 @@ export async function GET() {
 // POST - Suggest a new tool
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = await createClient()
     const body = await request.json()
     const { name, url, sessionId } = body
 
