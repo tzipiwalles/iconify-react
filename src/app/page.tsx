@@ -600,7 +600,7 @@ export default function Home() {
                   <img 
                     src="https://www.assetbridge.app/api/assets/Blossomco/svg" 
                     alt="Blossomco logo" 
-                    className="h-5 w-5"
+                    className="h-8 w-8 flex-shrink-0"
                   />
                   Brand assets integrated perfectly into marketing designs.
                 </p>
@@ -630,7 +630,7 @@ export default function Home() {
                   <img 
                     src="https://www.assetbridge.app/api/assets/NexusOS/svg" 
                     alt="NexusOS logo" 
-                    className="h-5 w-5"
+                    className="h-8 w-8 flex-shrink-0"
                   />
                   Live SaaS dashboards generated with dark mode logos.
                 </p>
@@ -660,7 +660,7 @@ export default function Home() {
                   <img 
                     src="https://www.assetbridge.app/api/assets/Blossomco/svg" 
                     alt="Blossomco logo" 
-                    className="h-5 w-5"
+                    className="h-8 w-8 flex-shrink-0"
                   />
                   Full e-commerce sites built instantly with custom branding.
                 </p>
