@@ -299,7 +299,7 @@ export default function Home() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 sm:h-16 max-w-7xl items-center justify-between px-3 sm:px-6">
+        <div className="mx-auto flex h-14 sm:h-16 max-w-6xl items-center justify-between px-3 sm:px-6">
           <div className="flex items-center gap-2 sm:gap-3.5">
             <div className={`flex items-center justify-center rounded-xl shadow-lg overflow-hidden ${
               brandLogo?.svgUrl 
@@ -364,7 +364,7 @@ export default function Home() {
       </header>
 
       {/* Main content */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-4 sm:py-6">
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-6">
         <div className="mb-6 text-center">
           <h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
             Use Your Real Custom Logo in{" "}
@@ -566,7 +566,7 @@ export default function Home() {
         </div>
 
         {/* Showcase Section - Social Proof */}
-        <div className="mx-auto mt-12 max-w-6xl">
+        <div className="mt-12">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold sm:text-3xl">
               Works flawlessly with your favorite AI tools
@@ -670,14 +670,14 @@ export default function Home() {
         </div>
 
         {/* Tool Compatibility Section */}
-        <div className="mx-auto mt-16 max-w-4xl">
+        <div className="mt-16">
           <ToolCompatibility />
         </div>
       </main>
 
       {/* Footer */}
       <footer className="mt-auto border-t border-border/50 py-4">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-6xl px-6">
           {/* Stats */}
           <div className="mb-3 flex items-center justify-center gap-6 text-sm">
             <div className="flex items-center gap-1.5 text-muted-foreground">
