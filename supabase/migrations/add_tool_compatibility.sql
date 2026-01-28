@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS ai_tools (
   category VARCHAR(50) NOT NULL, -- 'web_app', 'html', 'chat', 'ide'
   url VARCHAR(255),
   icon_emoji VARCHAR(10) DEFAULT '🤖',
+  icon_slug VARCHAR(50), -- For Simple Icons API (e.g., 'chatgpt', 'cursor')
   works BOOLEAN DEFAULT NULL, -- NULL = unknown, true = works, false = doesn't work
   verified BOOLEAN DEFAULT FALSE, -- Admin verified
   added_by UUID REFERENCES auth.users(id),
@@ -94,19 +95,19 @@ CREATE POLICY "Anyone can suggest" ON tool_suggestions
   FOR INSERT WITH CHECK (true);
 
 -- Insert initial tools based on testing
-INSERT INTO ai_tools (name, category, url, icon_emoji, works, verified) VALUES
-  ('Google AI Studio', 'web_app', 'https://aistudio.google.com', '🔷', true, true),
-  ('Gemini Chat', 'chat', 'https://gemini.google.com', '✨', true, true),
-  ('Base44', 'web_app', 'https://base44.com', '🟦', true, true),
-  ('Cursor', 'ide', 'https://cursor.com', '🖱️', true, true),
-  ('ChatGPT', 'chat', 'https://chat.openai.com', '🟢', true, true),
-  ('v0.dev', 'web_app', 'https://v0.dev', '▲', true, false),
-  ('Claude Artifacts', 'chat', 'https://claude.ai', '🟠', false, true),
-  ('Bolt.new', 'web_app', 'https://bolt.new', '⚡', NULL, false),
-  ('Lovable.dev', 'web_app', 'https://lovable.dev', '💜', NULL, false),
-  ('Replit AI', 'ide', 'https://replit.com', '🔵', NULL, false),
-  ('Windsurf', 'ide', 'https://codeium.com/windsurf', '🏄', NULL, false),
-  ('GitHub Copilot', 'ide', 'https://github.com/features/copilot', '🐙', NULL, false)
+INSERT INTO ai_tools (name, category, url, icon_emoji, icon_slug, works, verified) VALUES
+  ('Google AI Studio', 'web_app', 'https://aistudio.google.com', '🔷', 'google', true, true),
+  ('Gemini Chat', 'chat', 'https://gemini.google.com', '✨', 'googlegemini', true, true),
+  ('Base44', 'web_app', 'https://base44.com', '🟦', NULL, true, true),
+  ('Cursor', 'ide', 'https://cursor.com', '🖱️', 'cursor', true, true),
+  ('ChatGPT', 'chat', 'https://chat.openai.com', '🟢', 'openai', true, true),
+  ('v0.dev', 'web_app', 'https://v0.dev', '▲', 'vercel', true, false),
+  ('Claude Artifacts', 'chat', 'https://claude.ai', '🟠', 'anthropic', false, true),
+  ('Bolt.new', 'web_app', 'https://bolt.new', '⚡', 'stackblitz', NULL, false),
+  ('Lovable.dev', 'web_app', 'https://lovable.dev', '💜', NULL, NULL, false),
+  ('Replit AI', 'ide', 'https://replit.com', '🔵', 'replit', NULL, false),
+  ('Windsurf', 'ide', 'https://codeium.com/windsurf', '🏄', 'codeium', NULL, false),
+  ('GitHub Copilot', 'ide', 'https://github.com/features/copilot', '🐙', 'github', NULL, false)
 ON CONFLICT (name) DO NOTHING;
 
 -- Function to get tool stats with vote counts
@@ -117,6 +118,7 @@ RETURNS TABLE (
   category VARCHAR,
   url VARCHAR,
   icon_emoji VARCHAR,
+  icon_slug VARCHAR,
   works BOOLEAN,
   verified BOOLEAN,
   works_votes BIGINT,
@@ -131,6 +133,7 @@ BEGIN
     t.category,
     t.url,
     t.icon_emoji,
+    t.icon_slug,
     t.works,
     t.verified,
     COUNT(CASE WHEN v.works = true THEN 1 END) as works_votes,
@@ -138,7 +141,7 @@ BEGIN
     COUNT(v.id) as total_votes
   FROM ai_tools t
   LEFT JOIN tool_votes v ON t.id = v.tool_id
-  GROUP BY t.id, t.name, t.category, t.url, t.icon_emoji, t.works, t.verified
+  GROUP BY t.id, t.name, t.category, t.url, t.icon_emoji, t.icon_slug, t.works, t.verified
   ORDER BY t.verified DESC, t.works DESC NULLS LAST, t.name;
 END;
 $$ LANGUAGE plpgsql;

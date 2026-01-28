@@ -10,6 +10,7 @@ interface Tool {
   category: string
   url: string | null
   icon_emoji: string
+  icon_slug: string | null
   works: boolean | null
   verified: boolean
   works_votes: number
@@ -279,11 +280,22 @@ function ToolCard({
   getCategoryLabel: (category: string) => string
 }) {
   const tooltip = toolTooltips[tool.name]
+  const [logoError, setLogoError] = useState(false)
   
   return (
     <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3">
       <div className="flex items-center gap-3">
-        <span className="text-xl">{tool.icon_emoji}</span>
+        {/* Logo or emoji */}
+        {tool.icon_slug && !logoError ? (
+          <img
+            src={`https://cdn.simpleicons.org/${tool.icon_slug}`}
+            alt={`${tool.name} logo`}
+            className="h-6 w-6"
+            onError={() => setLogoError(true)}
+          />
+        ) : (
+          <span className="text-xl">{tool.icon_emoji}</span>
+        )}
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium">{tool.name}</span>
