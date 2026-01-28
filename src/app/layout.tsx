@@ -17,16 +17,15 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Fix Broken Images in Claude Artifacts & Cursor AI | Asset-Bridge",
+  title: "Fix Broken Images in AI Previews & Cursor | Asset-Bridge",
   description:
-    "Stop seeing broken image icons in AI previews. Host local images & custom logos instantly for Claude Artifacts, Cursor Composer, ChatGPT Canvas & Base44. Get permanent links in seconds. Free.",
+    "Stop seeing broken image icons in AI previews. Host local images & custom logos instantly for Cursor Composer, ChatGPT Canvas, Base44 & more. Get permanent links in seconds. Free.",
   keywords: [
-    "host local images for claude artifacts",
+    "host local images for ai tools",
     "fix broken image icon cursor ai",
     "custom logo in ai generated website",
     "svg hosting for ai prototypes",
     "render local assets chatgpt canvas",
-    "claude artifacts broken images",
     "cursor composer image hosting",
     "ai preview image fix",
     "base44 image hosting",
@@ -51,8 +50,8 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://www.assetbridge.app",
     siteName: "Asset-Bridge",
-    title: "Fix Broken Images in Claude Artifacts & Cursor AI Previews",
-    description: "Stop seeing broken image icons. Host your custom logos & local assets instantly for AI prototypes. Works with Claude, Cursor, ChatGPT Canvas & Base44.",
+    title: "Fix Broken Images in AI Previews & Cursor",
+    description: "Stop seeing broken image icons. Host your custom logos & local assets instantly for AI prototypes. Works with Cursor, ChatGPT Canvas, Base44 & more.",
     images: [
       {
         url: "https://www.assetbridge.app/og-image.png",
@@ -66,7 +65,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@assetbridge",
     creator: "@assetbridge",
-    title: "Fix Broken Images in Claude Artifacts & Cursor AI",
+    title: "Fix Broken Images in AI Previews & Cursor",
     description: "No more broken image icons. Host your custom logos instantly for AI prototypes. Free & open source.",
     images: ["https://www.assetbridge.app/og-image.png"],
   },
@@ -103,10 +102,10 @@ export default function RootLayout({
       "price": "0",
       "priceCurrency": "USD"
     },
-    "description": "Host local images and custom logos instantly for AI previews. Fix broken image icons in Claude Artifacts, Cursor Composer, ChatGPT Canvas, and Base44. Get permanent links for your assets in seconds.",
+    "description": "Host local images and custom logos instantly for AI previews. Fix broken image icons in Cursor Composer, ChatGPT Canvas, Base44 and more. Get permanent links for your assets in seconds.",
     "featureList": [
       "Instant image hosting for AI prototypes",
-      "Custom logo rendering in Claude Artifacts",
+      "Custom logo rendering in AI tools",
       "Fix broken images in Cursor Composer",
       "ChatGPT Canvas asset integration",
       "SVG to React component conversion",

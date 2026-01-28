@@ -371,7 +371,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Stop seeing broken image icons. Host your custom logos & local assets instantly — get permanent links for Claude Artifacts, Cursor Composer, ChatGPT Canvas & Base44.
+            Stop seeing broken image icons. Host your custom logos & local assets instantly — get permanent links for Cursor, ChatGPT Canvas, Base44 & more.
           </p>
         </div>
 
