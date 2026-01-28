@@ -283,11 +283,12 @@ function ToolCard({
   const [logoError, setLogoError] = useState(false)
   
   // Logos that need to be white (black logos)
-  const whiteLogos = ['github', 'cursor', 'anthropic', 'codeium', 'replit']
+  const whiteLogos = ['github', 'cursor', 'anthropic', 'codeium']
   
-  // Check if this logo needs to be white
+  // Check if this logo needs to be white (URLs from Asset-Bridge excluded for Base44)
+  const isAssetBridgeUrl = tool.icon_slug?.includes('assetbridge.app')
   const needsWhite = tool.icon_slug 
-    ? tool.icon_slug.startsWith('http') || whiteLogos.includes(tool.icon_slug)
+    ? (!isAssetBridgeUrl && tool.icon_slug.startsWith('http')) || whiteLogos.includes(tool.icon_slug)
     : false
   
   // Check if icon_slug is a full URL or a Simple Icons slug
@@ -308,7 +309,7 @@ function ToolCard({
             src={logoUrl}
             alt={`${tool.name} logo`}
             className="h-6 w-6"
-            style={{ filter: tool.icon_slug?.startsWith('http') ? 'brightness(0) invert(1)' : 'none' }}
+            style={{ filter: needsWhite && tool.icon_slug?.startsWith('http') && !isAssetBridgeUrl ? 'brightness(0) invert(1)' : 'none' }}
             onError={() => setLogoError(true)}
           />
         ) : (
