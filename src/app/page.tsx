@@ -43,6 +43,7 @@ export default function Home() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [savedAssetId, setSavedAssetId] = useState<string | null>(null)
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null)
   
   const { user, loading: authLoading } = useAuth()
   const { count: conversionCount, incrementCount, hasUsedFreeConversion, isLoaded: countLoaded } = useConversionCount()
@@ -583,7 +584,10 @@ export default function Home() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {/* Card 1 - ChatGPT Canvas */}
             <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
-              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+              <button
+                onClick={() => setLightboxImage({ src: "/showcase/chatgpt-canvas.png", alt: "Magazine cover created in ChatGPT Canvas with Asset-Bridge logo" })}
+                className="relative aspect-[4/3] w-full overflow-hidden bg-muted cursor-zoom-in"
+              >
                 <Image
                   src="/showcase/chatgpt-canvas.png"
                   alt="Magazine cover created in ChatGPT Canvas with Asset-Bridge logo"
@@ -595,7 +599,7 @@ export default function Home() {
                     <span className="text-emerald-400">●</span> ChatGPT Canvas
                   </span>
                 </div>
-              </div>
+              </button>
               <div className="p-4">
                 <p className="text-sm text-muted-foreground">
                   Brand assets integrated perfectly into marketing designs.
@@ -605,7 +609,10 @@ export default function Home() {
 
             {/* Card 2 - Google Gemini */}
             <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
-              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+              <button
+                onClick={() => setLightboxImage({ src: "/showcase/gemini-dashboard.png", alt: "Smart home dashboard created in Google Gemini with Asset-Bridge logo" })}
+                className="relative aspect-[4/3] w-full overflow-hidden bg-muted cursor-zoom-in"
+              >
                 <Image
                   src="/showcase/gemini-dashboard.png"
                   alt="Smart home dashboard created in Google Gemini with Asset-Bridge logo"
@@ -617,7 +624,7 @@ export default function Home() {
                     <span className="text-blue-400">●</span> Google Gemini
                   </span>
                 </div>
-              </div>
+              </button>
               <div className="p-4">
                 <p className="text-sm text-muted-foreground">
                   Live SaaS dashboards generated with dark mode logos.
@@ -627,7 +634,10 @@ export default function Home() {
 
             {/* Card 3 - Base44 */}
             <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
-              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+              <button
+                onClick={() => setLightboxImage({ src: "/showcase/base44-ecommerce.png", alt: "E-commerce site created in Base44 with Asset-Bridge logo" })}
+                className="relative aspect-[4/3] w-full overflow-hidden bg-muted cursor-zoom-in"
+              >
                 <Image
                   src="/showcase/base44-ecommerce.png"
                   alt="E-commerce site created in Base44 with Asset-Bridge logo"
@@ -639,7 +649,7 @@ export default function Home() {
                     <span className="text-orange-400">●</span> Base44 (No-Code)
                   </span>
                 </div>
-              </div>
+              </button>
               <div className="p-4">
                 <p className="text-sm text-muted-foreground">
                   Full e-commerce sites built instantly with custom branding.
@@ -706,6 +716,33 @@ export default function Home() {
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
       />
+
+      {/* Lightbox Modal for Showcase Images */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm cursor-zoom-out"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <div className="relative max-h-[90vh] max-w-[90vw]">
+            <Image
+              src={lightboxImage.src}
+              alt={lightboxImage.alt}
+              width={1920}
+              height={1080}
+              className="max-h-[90vh] w-auto object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
