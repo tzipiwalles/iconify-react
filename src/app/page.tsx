@@ -576,7 +576,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {/* Card 1 - ChatGPT Canvas */}
             <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
               <button
@@ -663,6 +663,36 @@ export default function Home() {
                     className="h-8 w-8 flex-shrink-0"
                   />
                   Full e-commerce sites built instantly with custom branding.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 4 - v0.dev */}
+            <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <button
+                onClick={() => setLightboxImage({ src: "/showcase/v0-quiz-app.png", alt: "Quiz app created in v0.dev with Asset-Bridge logo" })}
+                className="relative aspect-[4/3] w-full overflow-hidden bg-muted cursor-zoom-in"
+              >
+                <Image
+                  src="/showcase/v0-quiz-app.png"
+                  alt="Quiz app created in v0.dev with Asset-Bridge logo"
+                  fill
+                  className="object-cover object-top transition-transform group-hover:scale-105"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white">
+                    <span className="text-gray-300">▲</span> v0.dev
+                  </span>
+                </div>
+              </button>
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <img 
+                    src="https://www.assetbridge.app/api/assets/QuizFlow/svg" 
+                    alt="QuizFlow logo" 
+                    className="h-8 w-8 flex-shrink-0"
+                  />
+                  React Components generated in v0.
                 </p>
               </div>
             </div>
