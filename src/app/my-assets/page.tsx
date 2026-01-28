@@ -11,7 +11,10 @@ import {
   Trash2, 
   Download, 
   MoreVertical,
-  Share2
+  Share2,
+  Pencil,
+  Check,
+  X
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -40,6 +43,9 @@ export default function MyAssetsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [shareAsset, setShareAsset] = useState<Asset | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState("")
+  const [savingName, setSavingName] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -121,6 +127,54 @@ export default function MyAssetsPage() {
     } finally {
       setDeletingId(null)
       setMenuOpenId(null)
+    }
+  }
+
+  const handleStartEdit = (asset: Asset) => {
+    setEditingId(asset.id)
+    setEditName(asset.component_name)
+    setMenuOpenId(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditName("")
+  }
+
+  const handleSaveEdit = async (asset: Asset) => {
+    if (!editName.trim() || editName === asset.component_name) {
+      handleCancelEdit()
+      return
+    }
+
+    try {
+      setSavingName(true)
+      const response = await fetch(`/api/assets/${asset.component_name}/rename`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newName: editName }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        setError(result.error || "Failed to rename asset")
+        return
+      }
+
+      // Update local state
+      setAssets(assets.map(a => 
+        a.id === asset.id 
+          ? { ...a, component_name: result.data.newName }
+          : a
+      ))
+      
+      handleCancelEdit()
+    } catch (err) {
+      console.error("Rename failed:", err)
+      setError(err instanceof Error ? err.message : "Failed to rename asset")
+    } finally {
+      setSavingName(false)
     }
   }
 
@@ -224,7 +278,42 @@ export default function MyAssetsPage() {
                 <div className="p-4">
                   <div className="mb-2 flex items-start justify-between">
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-semibold">{asset.component_name}</h3>
+                      {editingId === asset.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveEdit(asset)
+                              if (e.key === "Escape") handleCancelEdit()
+                            }}
+                            className="flex-1 rounded-lg border border-primary bg-background px-2 py-1 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                            autoFocus
+                            disabled={savingName}
+                          />
+                          <button
+                            onClick={() => handleSaveEdit(asset)}
+                            disabled={savingName}
+                            className="rounded-lg p-1 text-primary hover:bg-primary/10"
+                          >
+                            {savingName ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            disabled={savingName}
+                            className="rounded-lg p-1 text-muted-foreground hover:bg-muted"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <h3 className="truncate font-semibold">{asset.component_name}</h3>
+                      )}
                       <p className="truncate text-sm text-muted-foreground">
                         {asset.original_filename}
                       </p>
@@ -246,6 +335,13 @@ export default function MyAssetsPage() {
                             onClick={() => setMenuOpenId(null)}
                           />
                           <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-xl border border-border bg-card p-1 shadow-xl">
+                            <button
+                              onClick={() => handleStartEdit(asset)}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted"
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Rename
+                            </button>
                             <button
                               onClick={() => handleDelete(asset.id)}
                               disabled={deletingId === asset.id}
