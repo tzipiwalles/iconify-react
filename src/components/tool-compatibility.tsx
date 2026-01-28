@@ -282,13 +282,20 @@ function ToolCard({
   const tooltip = toolTooltips[tool.name]
   const [logoError, setLogoError] = useState(false)
   
+  // Check if icon_slug is a full URL or a Simple Icons slug
+  const logoUrl = tool.icon_slug
+    ? tool.icon_slug.startsWith('http')
+      ? tool.icon_slug
+      : `https://cdn.simpleicons.org/${tool.icon_slug}`
+    : null
+  
   return (
     <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3">
       <div className="flex items-center gap-3">
         {/* Logo or emoji */}
-        {tool.icon_slug && !logoError ? (
+        {logoUrl && !logoError ? (
           <img
-            src={`https://cdn.simpleicons.org/${tool.icon_slug}`}
+            src={logoUrl}
             alt={`${tool.name} logo`}
             className="h-6 w-6"
             onError={() => setLogoError(true)}
