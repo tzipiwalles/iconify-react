@@ -6,6 +6,7 @@ import { SettingsPanel, OutputMode } from "@/components/settings-panel"
 import { ResultsPanel } from "@/components/results-panel"
 import { Button } from "@/components/ui/button"
 import { Zap, Github, Sparkles, Save, LogIn, Coffee, Users, ImageIcon } from "lucide-react"
+import Image from "next/image"
 import { useAuth } from "@/contexts/auth-context"
 import { useConversionCount } from "@/hooks/use-conversion-count"
 import { useSavedAsset } from "@/hooks/use-saved-asset"
@@ -566,6 +567,86 @@ export default function Home() {
         {/* Tool Compatibility Section */}
         <div className="mx-auto mt-12 max-w-4xl">
           <ToolCompatibility />
+        </div>
+
+        {/* Showcase Section - Social Proof */}
+        <div className="mx-auto mt-16 max-w-6xl">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold sm:text-3xl">
+              Works flawlessly with your favorite AI tools
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Real examples from our users — your logos, your brand, zero broken images.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Card 1 - ChatGPT Canvas */}
+            <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                <Image
+                  src="/showcase/chatgpt-canvas.png"
+                  alt="Magazine cover created in ChatGPT Canvas with Asset-Bridge logo"
+                  fill
+                  className="object-cover object-top transition-transform group-hover:scale-105"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white">
+                    <span className="text-emerald-400">●</span> ChatGPT Canvas
+                  </span>
+                </div>
+              </div>
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground">
+                  Brand assets integrated perfectly into marketing designs.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 2 - Google Gemini */}
+            <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                <Image
+                  src="/showcase/gemini-dashboard.png"
+                  alt="Smart home dashboard created in Google Gemini with Asset-Bridge logo"
+                  fill
+                  className="object-cover object-top transition-transform group-hover:scale-105"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white">
+                    <span className="text-blue-400">●</span> Google Gemini
+                  </span>
+                </div>
+              </div>
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground">
+                  Live SaaS dashboards generated with dark mode logos.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3 - Base44 */}
+            <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                <Image
+                  src="/showcase/base44-ecommerce.png"
+                  alt="E-commerce site created in Base44 with Asset-Bridge logo"
+                  fill
+                  className="object-cover object-top transition-transform group-hover:scale-105"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white">
+                    <span className="text-orange-400">●</span> Base44 (No-Code)
+                  </span>
+                </div>
+              </div>
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground">
+                  Full e-commerce sites built instantly with custom branding.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
 
