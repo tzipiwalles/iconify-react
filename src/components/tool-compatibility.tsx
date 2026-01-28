@@ -286,7 +286,7 @@ function ToolCard({
   const logoUrl = tool.icon_slug
     ? tool.icon_slug.startsWith('http')
       ? tool.icon_slug
-      : `https://cdn.simpleicons.org/${tool.icon_slug}`
+      : `https://cdn.simpleicons.org/${tool.icon_slug}/white`
     : null
   
   return (
@@ -298,6 +298,7 @@ function ToolCard({
             src={logoUrl}
             alt={`${tool.name} logo`}
             className="h-6 w-6"
+            style={{ filter: logoUrl.startsWith('http') ? 'brightness(0) invert(1)' : 'none' }}
             onError={() => setLogoError(true)}
           />
         ) : (
