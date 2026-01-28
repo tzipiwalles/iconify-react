@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { X, Copy, Check, Code, Image, Globe, Link as LinkIcon, Sparkles, Palette } from "lucide-react"
+import { X, Copy, Check, Code, Image, Globe, Link as LinkIcon, Sparkles, Palette, Wand2 } from "lucide-react"
 
 interface ShareModalProps {
   isOpen: boolean
@@ -17,7 +17,7 @@ interface ShareModalProps {
   baseUrl: string
 }
 
-type CopyType = "url" | "img" | "react" | "html" | "prompt" | null
+type CopyType = "url" | "img" | "react" | "html" | "prompt" | "claude-artifacts" | null
 
 export function ShareModal({ isOpen, onClose, asset, baseUrl }: ShareModalProps) {
   const [copied, setCopied] = useState<CopyType>(null)
@@ -40,7 +40,7 @@ When styling buttons, backgrounds, text, or accents, use ONLY these brand colors
 CSS variables you can use:
 ${asset.detected_colors!.map((color, i) => `  --brand-color-${i + 1}: ${color};`).join('\n')}` : ''
 
-  // AI Prompt content
+  // AI Prompt content (for tools that support external URLs)
   const aiPromptContent = `When generating code that needs my "${asset.component_name}" logo/icon, use this image URL:
 ${svgEndpoint}
 
@@ -49,6 +49,19 @@ Example usage in React/HTML:
 
 DO NOT generate or create the logo as inline SVG.
 ALWAYS use the URL above - it's hosted and publicly accessible.${colorsSection}`
+
+  // Claude Artifacts specific prompt (uses inline SVG because Artifacts blocks external URLs)
+  const claudeArtifactsPrompt = `⚠️ IMPORTANT: Claude Artifacts blocks external image URLs. Use the INLINE SVG below instead.
+
+When generating code that needs my "${asset.component_name}" logo/icon, use this React component with inline SVG:
+
+${asset.react_component}
+
+Usage example:
+<${asset.component_name} className="w-12 h-12" />
+
+DO NOT use external image URLs - they won't work in Claude Artifacts.
+ALWAYS use the inline SVG component above.${colorsSection}`
 
   const embedOptions = [
     {
@@ -59,12 +72,21 @@ ALWAYS use the URL above - it's hosted and publicly accessible.${colorsSection}`
       code: svgEndpoint,
     },
     {
+      id: "claude-artifacts" as CopyType,
+      title: "Claude Artifacts Prompt",
+      description: "With inline SVG (works in Artifacts!)",
+      icon: Wand2,
+      code: claudeArtifactsPrompt,
+      highlight: true,
+      hasColorToggle: true,
+      isClaudeArtifacts: true,
+    },
+    {
       id: "prompt" as CopyType,
-      title: "AI Prompt",
-      description: includeColors && hasColors ? "With brand colors" : "For Claude, ChatGPT, Cursor",
+      title: "AI Prompt (External URL)",
+      description: includeColors && hasColors ? "With brand colors" : "For ChatGPT, Cursor, v0",
       icon: Sparkles,
       code: aiPromptContent,
-      highlight: true,
       hasColorToggle: true,
     },
     {
