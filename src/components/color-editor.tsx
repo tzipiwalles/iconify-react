@@ -67,32 +67,40 @@ export function ColorEditor({
           {detectedColors.map((color, index) => (
             <div key={index} className="relative group">
               {editingColorIndex === index ? (
-                <div className="flex items-center gap-1 p-1 rounded-lg border border-primary bg-card">
-                  <input
-                    type="color"
-                    value={tempColor}
-                    onChange={(e) => setTempColor(e.target.value)}
-                    className="h-8 w-8 rounded cursor-pointer border-0"
-                  />
-                  <input
-                    type="text"
-                    value={tempColor}
-                    onChange={(e) => setTempColor(e.target.value)}
-                    className="w-20 px-2 py-1 text-xs rounded bg-muted border border-border"
-                    placeholder="#000000"
-                  />
-                  <button
-                    onClick={handleConfirmEdit}
-                    className="p-1 rounded hover:bg-primary/20 text-primary"
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="p-1 rounded hover:bg-muted text-muted-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                <div className="flex flex-col gap-2 p-3 rounded-xl border border-primary bg-card shadow-lg">
+                  {/* Large color picker */}
+                  <div className="relative">
+                    <input
+                      type="color"
+                      value={tempColor}
+                      onChange={(e) => setTempColor(e.target.value)}
+                      className="h-24 w-full rounded-lg cursor-pointer border-2 border-border"
+                      style={{ padding: 0 }}
+                    />
+                  </div>
+                  
+                  {/* Hex input and buttons */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={tempColor}
+                      onChange={(e) => setTempColor(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm font-mono rounded-lg bg-muted border border-border"
+                      placeholder="#000000"
+                    />
+                    <button
+                      onClick={handleConfirmEdit}
+                      className="p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button
@@ -138,32 +146,40 @@ export function ColorEditor({
           
           {/* Add color button/form */}
           {showAddColor ? (
-            <div className="flex items-center gap-1 p-1 rounded-lg border border-blue-500/50 bg-card">
-              <input
-                type="color"
-                value={newColor}
-                onChange={(e) => setNewColor(e.target.value)}
-                className="h-8 w-8 rounded cursor-pointer border-0"
-              />
-              <input
-                type="text"
-                value={newColor}
-                onChange={(e) => setNewColor(e.target.value)}
-                className="w-20 px-2 py-1 text-xs rounded bg-muted border border-border"
-                placeholder="#000000"
-              />
-              <button
-                onClick={handleAddNewColor}
-                className="p-1 rounded hover:bg-blue-500/20 text-blue-400"
-              >
-                <Check className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setShowAddColor(false)}
-                className="p-1 rounded hover:bg-muted text-muted-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
+            <div className="flex flex-col gap-2 p-3 rounded-xl border border-blue-500/50 bg-card shadow-lg">
+              {/* Large color picker */}
+              <div className="relative">
+                <input
+                  type="color"
+                  value={newColor}
+                  onChange={(e) => setNewColor(e.target.value)}
+                  className="h-24 w-full rounded-lg cursor-pointer border-2 border-border"
+                  style={{ padding: 0 }}
+                />
+              </div>
+              
+              {/* Hex input and buttons */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newColor}
+                  onChange={(e) => setNewColor(e.target.value)}
+                  className="flex-1 px-3 py-2 text-sm font-mono rounded-lg bg-muted border border-border"
+                  placeholder="#000000"
+                />
+                <button
+                  onClick={handleAddNewColor}
+                  className="p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setShowAddColor(false)}
+                  className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           ) : (
             <button
