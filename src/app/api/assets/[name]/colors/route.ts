@@ -1,14 +1,14 @@
 import { createClient } from "@/lib/supabase/server"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 // PATCH /api/assets/[name]/colors - Update asset colors
 export async function PATCH(
-  request: Request,
-  { params }: { params: { name: string } }
+  request: NextRequest,
+  context: { params: Promise<{ name: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const componentName = params.name
+    const { name: componentName } = await context.params
     const body = await request.json()
     
     const { detectedColors, additionalColors } = body as {
