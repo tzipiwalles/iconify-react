@@ -127,6 +127,10 @@ export async function PATCH(
         const timestamp = Date.now()
         const svgPath = `public/${user.id}/${componentName}_${timestamp}.svg`
         
+        console.log("[Colors API] Uploading SVG to path:", svgPath)
+        console.log("[Colors API] User ID:", user.id)
+        console.log("[Colors API] User email:", user.email)
+        
         const { error: uploadError } = await supabase.storage
           .from("assets")
           .upload(svgPath, svgBuffer, {
@@ -135,7 +139,8 @@ export async function PATCH(
           })
 
         if (uploadError) {
-          console.error("SVG upload error:", uploadError)
+          console.error("[Colors API] SVG upload error:", uploadError)
+          console.error("[Colors API] Upload path was:", svgPath)
           return NextResponse.json(
             { success: false, error: "Failed to upload updated SVG" },
             { status: 500 }
