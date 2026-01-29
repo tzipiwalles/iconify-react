@@ -13,6 +13,7 @@ interface ShareModalProps {
     svg_url: string
     visibility: string
     detected_colors?: string[]
+    additional_colors?: string[]
   }
   baseUrl: string
 }
@@ -29,16 +30,20 @@ export function ShareModal({ isOpen, onClose, asset, baseUrl }: ShareModalProps)
   const svgEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}/svg`
   const jsonEndpoint = `${baseUrl}/api/assets/${encodeURIComponent(asset.component_name)}`
 
-  // Format colors for the prompt
-  const hasColors = asset.detected_colors && asset.detected_colors.length > 0
+  // Format colors for the prompt - combine detected and additional colors
+  const allColors = [
+    ...(asset.detected_colors || []),
+    ...(asset.additional_colors || [])
+  ]
+  const hasColors = allColors.length > 0
   const colorsSection = hasColors && includeColors ? `
 
 🎨 BRAND COLORS (use these exact colors for consistency):
-${asset.detected_colors!.map((color, i) => `  ${i + 1}. ${color}`).join('\n')}
+${allColors.map((color, i) => `  ${i + 1}. ${color}${i < (asset.detected_colors?.length || 0) ? ' (from logo)' : ' (brand palette)'}`).join('\n')}
 
 When styling buttons, backgrounds, text, or accents, use ONLY these brand colors.
 CSS variables you can use:
-${asset.detected_colors!.map((color, i) => `  --brand-color-${i + 1}: ${color};`).join('\n')}` : ''
+${allColors.map((color, i) => `  --brand-color-${i + 1}: ${color};`).join('\n')}` : ''
 
   // AI Prompt content (for tools that support external URLs)
   const aiPromptContent = `When generating code that needs my "${asset.component_name}" logo/icon, use this image URL:
@@ -182,7 +187,7 @@ useEffect(() => {
                     <Palette className="h-4 w-4 text-purple-400" />
                     <span className="text-sm text-purple-300">Include brand colors in prompt</span>
                     <div className="flex gap-1 ml-2">
-                      {asset.detected_colors!.slice(0, 4).map((color, i) => (
+                      {allColors.slice(0, 6).map((color, i) => (
                         <div
                           key={i}
                           className="h-4 w-4 rounded-full border border-white/20"
@@ -190,6 +195,9 @@ useEffect(() => {
                           title={color}
                         />
                       ))}
+                      {allColors.length > 6 && (
+                        <span className="text-xs text-muted-foreground">+{allColors.length - 6}</span>
+                      )}
                     </div>
                   </div>
                   <button

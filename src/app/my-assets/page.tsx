@@ -14,11 +14,13 @@ import {
   Share2,
   Pencil,
   Check,
-  X
+  X,
+  Palette
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ShareModal } from "@/components/share-modal"
+import { ColorEditor } from "@/components/color-editor"
 
 interface Asset {
   id: string
@@ -29,6 +31,7 @@ interface Asset {
   svg_url: string
   react_component: string
   detected_colors: string[]
+  additional_colors?: string[]
   visibility: "private" | "organization" | "public"
   created_at: string
 }
@@ -46,6 +49,11 @@ export default function MyAssetsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState("")
   const [savingName, setSavingName] = useState(false)
+  const [editingColorsAsset, setEditingColorsAsset] = useState<Asset | null>(null)
+  const [editedDetectedColors, setEditedDetectedColors] = useState<string[]>([])
+  const [editedAdditionalColors, setEditedAdditionalColors] = useState<string[]>([])
+  const [savingColors, setSavingColors] = useState(false)
+  const [hasColorChanges, setHasColorChanges] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -176,6 +184,86 @@ export default function MyAssetsPage() {
     } finally {
       setSavingName(false)
     }
+  }
+
+  const handleStartEditColors = (asset: Asset) => {
+    setEditingColorsAsset(asset)
+    setEditedDetectedColors([...asset.detected_colors])
+    setEditedAdditionalColors([...(asset.additional_colors || [])])
+    setHasColorChanges(false)
+    setMenuOpenId(null)
+  }
+
+  const handleColorChange = (index: number, newColor: string) => {
+    const newColors = [...editedDetectedColors]
+    newColors[index] = newColor
+    setEditedDetectedColors(newColors)
+    setHasColorChanges(true)
+  }
+
+  const handleAddAdditionalColor = (color: string) => {
+    setEditedAdditionalColors([...editedAdditionalColors, color])
+    setHasColorChanges(true)
+  }
+
+  const handleRemoveAdditionalColor = (index: number) => {
+    const newColors = editedAdditionalColors.filter((_, i) => i !== index)
+    setEditedAdditionalColors(newColors)
+    setHasColorChanges(true)
+  }
+
+  const handleSaveColors = async () => {
+    if (!editingColorsAsset) return
+
+    try {
+      setSavingColors(true)
+      const response = await fetch(`/api/assets/${editingColorsAsset.component_name}/colors`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          detectedColors: editedDetectedColors,
+          additionalColors: editedAdditionalColors,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        setError(result.error || "Failed to update colors")
+        return
+      }
+
+      // Update local state
+      setAssets(assets.map(a => 
+        a.id === editingColorsAsset.id 
+          ? { 
+              ...a, 
+              detected_colors: result.data.detectedColors,
+              additional_colors: result.data.additionalColors,
+              svg_url: result.data.svgUrl,
+              react_component: result.data.reactComponent || a.react_component,
+            }
+          : a
+      ))
+      
+      setHasColorChanges(false)
+      setEditingColorsAsset(null)
+    } catch (err) {
+      console.error("Color update failed:", err)
+      setError(err instanceof Error ? err.message : "Failed to update colors")
+    } finally {
+      setSavingColors(false)
+    }
+  }
+
+  const handleCloseColorEditor = () => {
+    if (hasColorChanges) {
+      if (!confirm("You have unsaved changes. Are you sure you want to close?")) {
+        return
+      }
+    }
+    setEditingColorsAsset(null)
+    setHasColorChanges(false)
   }
 
 
@@ -342,6 +430,15 @@ export default function MyAssetsPage() {
                               <Pencil className="h-4 w-4" />
                               Rename
                             </button>
+                            {asset.detected_colors && asset.detected_colors.length > 0 && (
+                              <button
+                                onClick={() => handleStartEditColors(asset)}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted"
+                              >
+                                <Palette className="h-4 w-4" />
+                                Edit Colors
+                              </button>
+                            )}
                             <button
                               onClick={() => handleDelete(asset.id)}
                               disabled={deletingId === asset.id}
@@ -417,6 +514,63 @@ export default function MyAssetsPage() {
           asset={shareAsset}
           baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
         />
+      )}
+
+      {/* Color Editor Modal */}
+      {editingColorsAsset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={handleCloseColorEditor}
+          />
+          
+          {/* Modal */}
+          <div className="relative z-10 w-full max-w-xl max-h-[90vh] overflow-auto rounded-2xl border border-border bg-card p-6 shadow-2xl mx-4">
+            {/* Close button */}
+            <button
+              onClick={handleCloseColorEditor}
+              className="absolute right-4 top-4 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Header */}
+            <div className="mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Palette className="h-5 w-5 text-purple-400" />
+                Edit Colors
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Customize colors for <span className="font-medium text-foreground">{editingColorsAsset.component_name}</span>
+              </p>
+            </div>
+
+            {/* Preview */}
+            <div className="mb-6 rounded-xl border border-border p-4">
+              <p className="mb-3 text-sm font-medium">Preview:</p>
+              <div className="flex items-center justify-center rounded-lg bg-muted/50 p-6">
+                <img 
+                  src={editingColorsAsset.svg_url} 
+                  alt={editingColorsAsset.component_name}
+                  className="h-24 w-24 object-contain"
+                />
+              </div>
+            </div>
+
+            {/* Color Editor */}
+            <ColorEditor
+              detectedColors={editedDetectedColors}
+              additionalColors={editedAdditionalColors}
+              onColorChange={handleColorChange}
+              onAddColor={handleAddAdditionalColor}
+              onRemoveAdditionalColor={handleRemoveAdditionalColor}
+              onSave={handleSaveColors}
+              isSaving={savingColors}
+              hasChanges={hasColorChanges}
+            />
+          </div>
+        </div>
       )}
     </div>
   )
