@@ -399,7 +399,7 @@ export default function Home() {
               </div>
             )}
 
-            <ResultsPanel result={result} />
+            <ResultsPanel result={result} onLoginClick={() => setShowAuthModal(true)} />
           </div>
 
           {/* Right column - Settings */}
