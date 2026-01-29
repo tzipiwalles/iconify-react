@@ -1362,7 +1362,9 @@ export async function POST(request: NextRequest) {
       console.log(`[API] Original image dimensions: ${originalWidth}x${originalHeight}`)
       
       // Check if PNG has alpha channel (transparency)
-      if (fileType === "image/png" && metadata.channels === 4 && !shouldRemoveBackground) {
+      // Only block transparent images in LOGO mode (color detection is complex)
+      // Icon mode creates a silhouette anyway, so transparency is fine
+      if (mode === "logo" && fileType === "image/png" && metadata.channels === 4 && !shouldRemoveBackground) {
         // Check if image actually uses transparency
         const { data } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true })
         let hasTransparency = false
@@ -1374,15 +1376,24 @@ export async function POST(request: NextRequest) {
         }
         
         if (hasTransparency) {
-          console.log("[API] ⚠️ Image has transparent background - not fully supported yet")
+          console.log("[API] ⚠️ Logo mode with transparent background - not fully supported yet")
           return NextResponse.json(
             { 
-              error: "Transparent backgrounds are not fully supported yet. Please upload an image with a solid background (white recommended), or enable 'Remove Background' option.",
+              error: "Logo mode doesn't support transparent backgrounds yet. Please use Icon mode, upload an image with a solid background, or enable 'Remove Background' option.",
               errorType: "TRANSPARENT_NOT_SUPPORTED"
             },
             { status: 400 }
           )
         }
+      }
+      
+      // For Icon mode with transparency, flatten to white background for silhouette creation
+      if (mode === "icon" && fileType === "image/png" && metadata.channels === 4) {
+        console.log("[API] Icon mode with transparent PNG - flattening to white background")
+        buffer = await sharp(buffer)
+          .flatten({ background: { r: 255, g: 255, b: 255 } })
+          .png()
+          .toBuffer() as Buffer<ArrayBuffer>
       }
       
       // Step 2: Background removal (if requested)
