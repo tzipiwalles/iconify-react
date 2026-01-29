@@ -598,9 +598,10 @@ export default function Home() {
               <div className="p-4">
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <img 
-                    src="https://www.assetbridge.app/api/assets/Blossomco/svg" 
-                    alt="Blossomco logo" 
+                    src="https://www.assetbridge.app/api/assets/Openai/svg" 
+                    alt="OpenAI logo" 
                     className="h-8 w-8 flex-shrink-0"
+                    style={{ filter: 'brightness(0) invert(1)' }}
                   />
                   Brand assets integrated perfectly into marketing designs.
                 </p>
@@ -688,9 +689,10 @@ export default function Home() {
               <div className="p-4">
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <img 
-                    src="https://www.assetbridge.app/api/assets/QuizFlow/svg" 
-                    alt="QuizFlow logo" 
+                    src="https://www.assetbridge.app/api/assets/V0ByVercelLogo/svg" 
+                    alt="v0 by Vercel logo" 
                     className="h-8 w-8 flex-shrink-0"
+                    style={{ filter: 'brightness(0) invert(1)' }}
                   />
                   React Components generated in v0.
                 </p>
