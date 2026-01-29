@@ -292,7 +292,7 @@ function ToolCard({
       filter: 'brightness(0) invert(1)'
     },
     'Base44': {
-      url: 'https://www.assetbridge.app/api/assets/Base44/svg',
+      url: 'https://www.assetbridge.app/api/assets/Base44/svg?v=2',
       filter: 'none' // Keep original colors (orange)
     }
   }
