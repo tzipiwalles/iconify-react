@@ -150,12 +150,11 @@ export default function CreatePage() {
 
       incrementCount()
       
-      trackEvent("convert_image", {
+      trackEvent("generate_success", {
         mode,
         fileSize: selectedFile.size,
         fileType: selectedFile.type,
         componentName: data.componentName,
-        removeBackground,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
