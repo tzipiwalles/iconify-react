@@ -182,8 +182,7 @@ async function extractDominantColors(buffer: Buffer, colorCount: number, sampleF
         // Skip near-white pixels (likely light background)
         if (r > 240 && g > 240 && b > 240) continue
         
-        // Skip very dark/black pixels (likely shadows or dark background)
-        if (r < 15 && g < 15 && b < 15) continue
+        // Note: We don't skip black pixels anymore - black is a valid logo color (e.g., Intel logo)
         
         // Skip near-gray pixels (low saturation, not distinctive)
         const maxChannel = Math.max(r, g, b)
