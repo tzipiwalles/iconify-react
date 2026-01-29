@@ -15,7 +15,9 @@ import {
   Pencil,
   Check,
   X,
-  Palette
+  Palette,
+  Globe,
+  Lock
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -54,6 +56,7 @@ export default function MyAssetsPage() {
   const [editedAdditionalColors, setEditedAdditionalColors] = useState<string[]>([])
   const [savingColors, setSavingColors] = useState(false)
   const [hasColorChanges, setHasColorChanges] = useState(false)
+  const [togglingVisibility, setTogglingVisibility] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -266,6 +269,40 @@ export default function MyAssetsPage() {
     setHasColorChanges(false)
   }
 
+  const handleToggleVisibility = async (asset: Asset) => {
+    const newVisibility = asset.visibility === "public" ? "private" : "public"
+    
+    try {
+      setTogglingVisibility(asset.id)
+      setMenuOpenId(null)
+      
+      const response = await fetch(`/api/assets/${asset.component_name}/visibility`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: newVisibility }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        setError(result.error || "Failed to update visibility")
+        return
+      }
+
+      // Update local state
+      setAssets(assets.map(a => 
+        a.id === asset.id 
+          ? { ...a, visibility: newVisibility }
+          : a
+      ))
+    } catch (err) {
+      console.error("Visibility toggle failed:", err)
+      setError(err instanceof Error ? err.message : "Failed to update visibility")
+    } finally {
+      setTogglingVisibility(null)
+    }
+  }
+
 
   if (authLoading || (!user && !authLoading)) {
     return (
@@ -360,6 +397,20 @@ export default function MyAssetsPage() {
                     {asset.mode}
                   </span>
 
+                  {/* Visibility badge */}
+                  <span className={`absolute right-3 top-3 rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 ${
+                    asset.visibility === "public" 
+                      ? "bg-emerald-500/20 text-emerald-400" 
+                      : "bg-gray-500/20 text-gray-400"
+                  }`}>
+                    {asset.visibility === "public" ? (
+                      <Globe className="h-3 w-3" />
+                    ) : (
+                      <Lock className="h-3 w-3" />
+                    )}
+                    {asset.visibility}
+                  </span>
+
                 </div>
 
                 {/* Info */}
@@ -439,6 +490,20 @@ export default function MyAssetsPage() {
                                 Edit Colors
                               </button>
                             )}
+                            <button
+                              onClick={() => handleToggleVisibility(asset)}
+                              disabled={togglingVisibility === asset.id}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted"
+                            >
+                              {togglingVisibility === asset.id ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+                              ) : asset.visibility === "public" ? (
+                                <Lock className="h-4 w-4" />
+                              ) : (
+                                <Globe className="h-4 w-4" />
+                              )}
+                              {asset.visibility === "public" ? "Make Private" : "Make Public"}
+                            </button>
                             <button
                               onClick={() => handleDelete(asset.id)}
                               disabled={deletingId === asset.id}
