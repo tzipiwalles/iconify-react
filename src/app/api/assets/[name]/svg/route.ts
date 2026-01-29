@@ -47,7 +47,7 @@ export async function GET(
         status: 200,
         headers: {
           "Content-Type": "image/svg+xml",
-          "Cache-Control": "public, max-age=31536000, immutable",
+          "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400", // 1 hour cache, revalidate in background for 24h
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET",
         },
