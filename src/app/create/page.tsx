@@ -356,6 +356,7 @@ export default function CreatePage() {
               onRemoveBackgroundChange={setRemoveBackground}
               componentName={componentName}
               onComponentNameChange={setComponentName}
+              isProcessing={isProcessing}
             />
 
             <Button
