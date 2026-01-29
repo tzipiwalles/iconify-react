@@ -4,6 +4,7 @@
 export const ADMIN_EMAILS = [
   "tzipi.walles@gmail.com",
   "IQton", // GitHub username - will match against user_metadata.user_name
+  "dev@assetbridge.app", // Dev user for local testing
 ]
 
 export function isAdmin(user: { email?: string | null; user_metadata?: { user_name?: string } } | null): boolean {
