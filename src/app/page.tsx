@@ -576,7 +576,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {/* Card 1 - ChatGPT Canvas */}
             <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
               <button
@@ -693,6 +693,66 @@ export default function Home() {
                     className="h-8 w-8 flex-shrink-0"
                   />
                   React Components generated in v0.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 5 - Gemini Canvas (Application) */}
+            <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <button
+                onClick={() => setLightboxImage({ src: "/showcase/gemini-canvas-sec1.png", alt: "Password Generator app created in Gemini Canvas" })}
+                className="relative aspect-[4/3] w-full overflow-hidden bg-muted cursor-zoom-in"
+              >
+                <Image
+                  src="/showcase/gemini-canvas-sec1.png"
+                  alt="Password Generator app created in Gemini Canvas"
+                  fill
+                  className="object-cover object-top transition-transform group-hover:scale-105"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white">
+                    <span className="text-cyan-400">✦</span> Gemini Canvas
+                  </span>
+                </div>
+              </button>
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <img 
+                    src="https://www.assetbridge.app/api/assets/Sec1/svg" 
+                    alt="Sec1 logo" 
+                    className="h-8 w-8 flex-shrink-0"
+                  />
+                  Branded web application with custom logo integration.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 6 - Gemini Canvas (Presentation) */}
+            <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <button
+                onClick={() => setLightboxImage({ src: "/showcase/gemini-canvas-nexus.png", alt: "Investor presentation created in Gemini Canvas" })}
+                className="relative aspect-[4/3] w-full overflow-hidden bg-muted cursor-zoom-in"
+              >
+                <Image
+                  src="/showcase/gemini-canvas-nexus.png"
+                  alt="Investor presentation created in Gemini Canvas"
+                  fill
+                  className="object-cover object-top transition-transform group-hover:scale-105"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white">
+                    <span className="text-cyan-400">✦</span> Gemini Canvas
+                  </span>
+                </div>
+              </button>
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <img 
+                    src="https://www.assetbridge.app/api/assets/NexusOS/svg" 
+                    alt="NexusOS logo" 
+                    className="h-8 w-8 flex-shrink-0"
+                  />
+                  Professional investor deck with smooth transitions.
                 </p>
               </div>
             </div>

@@ -24,26 +24,44 @@ export async function GET() {
     
     const supabase = await createClient()
     
-    // Count users
-    const { count: userCount } = await supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
+    // Use the database function that bypasses RLS for counting
+    const { data: statsData, error } = await supabase.rpc("get_public_stats")
     
-    // Count assets by mode
-    const { data: assets } = await supabase
-      .from("assets")
-      .select("mode")
-    
-    const iconCount = assets?.filter(a => a.mode === "icon").length || 0
-    const logoCount = assets?.filter(a => a.mode === "logo").length || 0
+    if (error) {
+      console.error("Stats RPC error:", error)
+      // Fallback to direct query (may return limited results due to RLS)
+      const { count: userCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+      
+      const { data: assets } = await supabase
+        .from("assets")
+        .select("mode")
+      
+      const iconCount = assets?.filter(a => a.mode === "icon").length || 0
+      const logoCount = assets?.filter(a => a.mode === "logo").length || 0
+      
+      const stats = {
+        success: true,
+        data: {
+          users: userCount || 0,
+          icons: iconCount,
+          logos: logoCount,
+          totalAssets: iconCount + logoCount,
+        },
+      }
+      
+      cachedStats = { data: stats, timestamp: Date.now() }
+      return NextResponse.json(stats)
+    }
     
     const stats = {
       success: true,
       data: {
-        users: userCount || 0,
-        icons: iconCount,
-        logos: logoCount,
-        totalAssets: iconCount + logoCount,
+        users: statsData?.users || 0,
+        icons: statsData?.icons || 0,
+        logos: statsData?.logos || 0,
+        totalAssets: statsData?.totalAssets || 0,
       },
     }
     
