@@ -9,10 +9,16 @@ export async function DELETE(
   try {
     const { name: componentName } = await context.params
 
+    // Check for required environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
     // Create admin client inside the function to avoid build-time errors
     const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     )
 
     // Get auth header
@@ -73,7 +79,10 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error("Admin delete error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Admin delete error:", error instanceof Error ? error.message : error)
+    return NextResponse.json({ 
+      error: "Internal server error",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 })
   }
 }
