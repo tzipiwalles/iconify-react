@@ -2,18 +2,18 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { isAdmin } from "@/lib/admin"
 
-// Create admin client for bypassing RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ name: string }> }
 ) {
   try {
     const { name: componentName } = await context.params
+
+    // Create admin client inside the function to avoid build-time errors
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Get auth header
     const authHeader = request.headers.get("authorization")
