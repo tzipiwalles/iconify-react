@@ -282,23 +282,45 @@ function ToolCard({
   const tooltip = toolTooltips[tool.name]
   const [logoError, setLogoError] = useState(false)
   
-  // Logos that need to be white (black logos)
-  const whiteLogos = ['github', 'cursor', 'anthropic', 'codeium']
+  // Logos that need to be white (black logos from Simple Icons)
+  const whiteLogos = ['github', 'cursor', 'anthropic', 'codeium', 'openai']
   
-  // Check if this logo needs to be white (URLs from Asset-Bridge excluded for Base44)
+  // Custom logo overrides for specific tools
+  const logoOverrides: Record<string, { url: string; filter?: string }> = {
+    'v0.dev': { 
+      url: 'https://www.assetbridge.app/api/assets/V0ByVercelLogo/svg',
+      filter: 'brightness(0) invert(1)'
+    },
+    'Base44': {
+      url: 'https://www.assetbridge.app/api/assets/Base44/svg',
+      filter: 'none' // Keep original colors (orange)
+    }
+  }
+  
+  // Check if there's a custom override
+  const override = logoOverrides[tool.name]
+  
+  // Check if this logo needs to be white
   const isAssetBridgeUrl = tool.icon_slug?.includes('assetbridge.app')
   const needsWhite = tool.icon_slug 
-    ? (!isAssetBridgeUrl && tool.icon_slug.startsWith('http')) || whiteLogos.includes(tool.icon_slug)
+    ? whiteLogos.includes(tool.icon_slug)
     : false
   
   // Check if icon_slug is a full URL or a Simple Icons slug
-  const logoUrl = tool.icon_slug
+  const logoUrl = override?.url || (tool.icon_slug
     ? tool.icon_slug.startsWith('http')
       ? tool.icon_slug
       : needsWhite
         ? `https://cdn.simpleicons.org/${tool.icon_slug}/white`
         : `https://cdn.simpleicons.org/${tool.icon_slug}`
-    : null
+    : null)
+  
+  // Determine the filter to apply
+  const logoFilter = override?.filter ?? (
+    needsWhite && tool.icon_slug?.startsWith('http') && !isAssetBridgeUrl 
+      ? 'brightness(0) invert(1)' 
+      : 'none'
+  )
   
   return (
     <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3">
@@ -309,7 +331,7 @@ function ToolCard({
             src={logoUrl}
             alt={`${tool.name} logo`}
             className="h-6 w-6"
-            style={{ filter: needsWhite && tool.icon_slug?.startsWith('http') && !isAssetBridgeUrl ? 'brightness(0) invert(1)' : 'none' }}
+            style={{ filter: logoFilter }}
             onError={() => setLogoError(true)}
           />
         ) : (
