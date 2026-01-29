@@ -23,10 +23,6 @@ interface PublicAsset {
   mode: "icon" | "logo"
   detectedColors: string[]
   createdAt: string
-  creator: {
-    name: string | null
-    avatar: string | null
-  } | null
 }
 
 export default function Home() {

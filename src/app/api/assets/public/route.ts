@@ -14,12 +14,7 @@ export async function GET() {
         svg_url,
         mode,
         detected_colors,
-        created_at,
-        user_id,
-        profiles:user_id (
-          full_name,
-          avatar_url
-        )
+        created_at
       `)
       .eq("visibility", "public")
       .order("created_at", { ascending: false })
@@ -42,10 +37,6 @@ export async function GET() {
         mode: asset.mode,
         detectedColors: asset.detected_colors,
         createdAt: asset.created_at,
-        creator: asset.profiles ? {
-          name: (asset.profiles as { full_name: string | null }).full_name,
-          avatar: (asset.profiles as { avatar_url: string | null }).avatar_url,
-        } : null,
       })),
     })
   } catch (error) {
