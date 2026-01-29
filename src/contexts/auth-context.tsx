@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean
   signInWithGoogle: () => Promise<void>
   signInWithGithub: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -72,6 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error
   }
 
+  const signInWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (error) throw error
+  }
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
@@ -85,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signInWithGoogle,
         signInWithGithub,
+        signInWithEmail,
         signOut,
       }}
     >

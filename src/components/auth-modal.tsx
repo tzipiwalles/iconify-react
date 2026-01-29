@@ -11,10 +11,15 @@ interface AuthModalProps {
   conversionCount?: number
 }
 
+const isDev = process.env.NODE_ENV === "development"
+
 export function AuthModal({ isOpen, onClose, conversionCount = 1 }: AuthModalProps) {
-  const { signInWithGoogle, signInWithGithub } = useAuth()
-  const [isLoading, setIsLoading] = useState<"google" | "github" | null>(null)
+  const { signInWithGoogle, signInWithGithub, signInWithEmail } = useAuth()
+  const [isLoading, setIsLoading] = useState<"google" | "github" | "dev" | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showDevLogin, setShowDevLogin] = useState(false)
+  const [devEmail, setDevEmail] = useState("")
+  const [devPassword, setDevPassword] = useState("")
 
   if (!isOpen) return null
 
@@ -34,6 +39,18 @@ export function AuthModal({ isOpen, onClose, conversionCount = 1 }: AuthModalPro
       setIsLoading("github")
       setError(null)
       await signInWithGithub()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to sign in")
+      setIsLoading(null)
+    }
+  }
+
+  const handleDevLogin = async () => {
+    try {
+      setIsLoading("dev")
+      setError(null)
+      await signInWithEmail(devEmail, devPassword)
+      onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to sign in")
       setIsLoading(null)
@@ -126,6 +143,59 @@ export function AuthModal({ isOpen, onClose, conversionCount = 1 }: AuthModalPro
             )}
             Continue with GitHub
           </Button>
+
+          {/* Dev Login - Only in development */}
+          {isDev && (
+            <>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Dev Login</span>
+                </div>
+              </div>
+
+              {!showDevLogin ? (
+                <Button
+                  onClick={() => setShowDevLogin(true)}
+                  variant="ghost"
+                  className="h-10 w-full gap-2 rounded-xl text-yellow-500 hover:text-yellow-400"
+                >
+                  🔧 Dev Mode Login
+                </Button>
+              ) : (
+                <div className="space-y-3 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4">
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={devEmail}
+                    onChange={(e) => setDevEmail(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={devPassword}
+                    onChange={(e) => setDevPassword(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    onKeyDown={(e) => e.key === "Enter" && handleDevLogin()}
+                  />
+                  <Button
+                    onClick={handleDevLogin}
+                    disabled={isLoading === "dev" || !devEmail || !devPassword}
+                    className="h-10 w-full gap-2 rounded-xl bg-yellow-600 hover:bg-yellow-500"
+                  >
+                    {isLoading === "dev" ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Benefits */}
