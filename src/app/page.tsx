@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Zap, Github, Sparkles, LogIn, Coffee, Users, ImageIcon, Plus, Share2 } from "lucide-react"
+import { Zap, Github, Sparkles, LogIn, Coffee, Users, ImageIcon, Plus, Share2, Trash2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
@@ -13,6 +13,8 @@ import { FeedbackModal } from "@/components/feedback-modal"
 import { UserMenu } from "@/components/user-menu"
 import { ToolCompatibility } from "@/components/tool-compatibility"
 import { ShareModal } from "@/components/share-modal"
+import { isAdmin } from "@/lib/admin"
+import { createClient } from "@/lib/supabase/client"
 
 // Brand logo component name
 const BRAND_LOGO_NAME = "ABmini"
@@ -33,8 +35,47 @@ export default function Home() {
   const [loadingAssets, setLoadingAssets] = useState(true)
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null)
   const [shareAsset, setShareAsset] = useState<PublicAsset | null>(null)
+  const [deletingAsset, setDeletingAsset] = useState<string | null>(null)
   
   const { user, loading: authLoading } = useAuth()
+  const userIsAdmin = isAdmin(user)
+  const supabase = createClient()
+
+  const handleAdminDelete = async (asset: PublicAsset) => {
+    if (!confirm(`Are you sure you want to delete "${asset.componentName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    setDeletingAsset(asset.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        alert("Not authenticated")
+        return
+      }
+
+      const response = await fetch(`/api/admin/assets/${encodeURIComponent(asset.componentName)}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        alert(data.error || "Failed to delete asset")
+        return
+      }
+
+      // Remove from local state
+      setPublicAssets(prev => prev.filter(a => a.id !== asset.id))
+    } catch (error) {
+      console.error("Delete error:", error)
+      alert("Failed to delete asset")
+    } finally {
+      setDeletingAsset(null)
+    }
+  }
   const { asset: brandLogo } = useSavedAsset(BRAND_LOGO_NAME)
   const { stats } = useStats()
 
@@ -260,6 +301,20 @@ export default function Home() {
                       <Share2 className="h-4 w-4" />
                       Share & Embed
                     </Button>
+
+                    {/* Admin delete button */}
+                    {userIsAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full gap-2 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                        onClick={() => handleAdminDelete(asset)}
+                        disabled={deletingAsset === asset.id}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deletingAsset === asset.id ? "Deleting..." : "Delete (Admin)"}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
