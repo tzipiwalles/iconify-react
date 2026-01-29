@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Zap, Github, Sparkles, LogIn, Coffee, Users, ImageIcon, Plus, ExternalLink } from "lucide-react"
+import { Zap, Github, Sparkles, LogIn, Coffee, Users, ImageIcon, Plus, Share2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
@@ -12,6 +12,7 @@ import { AuthModal } from "@/components/auth-modal"
 import { FeedbackModal } from "@/components/feedback-modal"
 import { UserMenu } from "@/components/user-menu"
 import { ToolCompatibility } from "@/components/tool-compatibility"
+import { ShareModal } from "@/components/share-modal"
 
 // Brand logo component name
 const BRAND_LOGO_NAME = "ABmini"
@@ -31,6 +32,7 @@ export default function Home() {
   const [publicAssets, setPublicAssets] = useState<PublicAsset[]>([])
   const [loadingAssets, setLoadingAssets] = useState(true)
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null)
+  const [shareAsset, setShareAsset] = useState<PublicAsset | null>(null)
   
   const { user, loading: authLoading } = useAuth()
   const { asset: brandLogo } = useSavedAsset(BRAND_LOGO_NAME)
@@ -248,22 +250,16 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Use URL */}
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 truncate rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
-                        /api/assets/{asset.componentName}/svg
-                      </code>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0"
-                        onClick={() => {
-                          navigator.clipboard.writeText(`https://www.assetbridge.app/api/assets/${asset.componentName}/svg`)
-                        }}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    {/* Share button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => setShareAsset(asset)}
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Share & Embed
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -558,6 +554,22 @@ export default function Home() {
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
       />
+
+      {/* Share Modal for public gallery */}
+      {shareAsset && (
+        <ShareModal
+          isOpen={!!shareAsset}
+          onClose={() => setShareAsset(null)}
+          asset={{
+            component_name: shareAsset.componentName,
+            react_component: "", // Not available for public assets
+            svg_url: shareAsset.svgUrl,
+            visibility: "public",
+            detected_colors: shareAsset.detectedColors,
+          }}
+          baseUrl="https://www.assetbridge.app"
+        />
+      )}
     </div>
   )
 }
