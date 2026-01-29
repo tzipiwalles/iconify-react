@@ -591,7 +591,8 @@ export default function Home() {
                 />
                 <div className="absolute top-3 left-3">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white">
-                    <span className="text-emerald-400">●</span> ChatGPT Canvas
+                    <img src="https://www.assetbridge.app/api/assets/Openai/svg" alt="" className="h-3.5 w-3.5" style={{ filter: 'brightness(0) invert(1)' }} />
+                    ChatGPT Canvas
                   </span>
                 </div>
               </button>
@@ -682,7 +683,8 @@ export default function Home() {
                 />
                 <div className="absolute top-3 left-3">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white">
-                    <span className="text-gray-300">▲</span> v0.dev
+                    <img src="https://www.assetbridge.app/api/assets/V0ByVercelLogo/svg" alt="" className="h-3.5 w-3.5" style={{ filter: 'brightness(0) invert(1)' }} />
+                    v0.dev
                   </span>
                 </div>
               </button>
