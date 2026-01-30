@@ -4,19 +4,21 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { 
+  ArrowLeft,
   Users, 
   ImageIcon, 
   Sparkles,
   Shield,
   Coffee,
   Activity,
+  Zap,
   Target,
   TrendingUp,
   Filter,
   X
 } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { SiteHeader } from "@/components/site-header"
 
 interface UserStats {
   id: string
@@ -104,6 +106,7 @@ export default function AdminPage() {
       fetchApiUsage()
       fetchEventStats()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   // Refetch event stats when excluded users change
@@ -111,7 +114,8 @@ export default function AdminPage() {
     if (user && data) {
       fetchEventStats()
     }
-  }, [excludedUserIds, user, data])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [excludedUserIds])
 
   const fetchAdminData = async () => {
     try {
@@ -130,7 +134,7 @@ export default function AdminPage() {
       const result = await response.json()
 
       setData(result.data)
-    } catch (err) {
+    } catch {
       setError("Failed to fetch admin data")
     } finally {
       setLoading(false)
