@@ -63,7 +63,9 @@ export default function Home() {
 
       if (!response.ok) {
         const data = await response.json()
-        alert(data.error || "Failed to delete asset")
+        const errorMsg = data.details ? `${data.error}: ${data.details}` : data.error
+        console.error("Delete error:", data)
+        alert(errorMsg || "Failed to delete asset")
         return
       }
 

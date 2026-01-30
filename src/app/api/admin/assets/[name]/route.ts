@@ -8,6 +8,7 @@ export async function DELETE(
 ) {
   try {
     const { name: componentName } = await context.params
+    console.log(`[Admin Delete] Attempting to delete asset: ${componentName}`)
 
     // Check for required environment variables
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -33,13 +34,19 @@ export async function DELETE(
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
     
     if (authError || !user) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+      console.error("[Admin Delete] Auth error:", authError)
+      return NextResponse.json({ error: "Invalid token", details: authError?.message }, { status: 401 })
     }
+
+    console.log(`[Admin Delete] User: ${user.email}`)
 
     // Check if user is admin
     if (!isAdmin(user)) {
+      console.error("[Admin Delete] User is not admin:", user.email)
       return NextResponse.json({ error: "Forbidden - Admin only" }, { status: 403 })
     }
+
+    console.log(`[Admin Delete] Admin check passed`)
 
     // Get the asset first to find the storage path
     const { data: asset, error: fetchError } = await supabaseAdmin
@@ -49,8 +56,14 @@ export async function DELETE(
       .single()
 
     if (fetchError || !asset) {
-      return NextResponse.json({ error: "Asset not found" }, { status: 404 })
+      console.error("[Admin Delete] Asset not found:", fetchError)
+      return NextResponse.json({ 
+        error: "Asset not found", 
+        details: fetchError?.message 
+      }, { status: 404 })
     }
+
+    console.log(`[Admin Delete] Found asset:`, asset.id)
 
     // Delete from storage if exists
     if (asset.svg_url) {
@@ -58,20 +71,31 @@ export async function DELETE(
       const urlParts = asset.svg_url.split("/svgs/")
       if (urlParts.length > 1) {
         const storagePath = urlParts[1]
-        await supabaseAdmin.storage.from("svgs").remove([storagePath])
+        console.log(`[Admin Delete] Deleting from storage: ${storagePath}`)
+        const { error: storageError } = await supabaseAdmin.storage.from("svgs").remove([storagePath])
+        if (storageError) {
+          console.error("[Admin Delete] Storage delete error:", storageError)
+          // Continue even if storage delete fails
+        }
       }
     }
 
     // Delete the asset record
+    console.log(`[Admin Delete] Deleting asset record from database`)
     const { error: deleteError } = await supabaseAdmin
       .from("assets")
       .delete()
       .eq("id", asset.id)
 
     if (deleteError) {
-      console.error("Error deleting asset:", deleteError)
-      return NextResponse.json({ error: "Failed to delete asset" }, { status: 500 })
+      console.error("[Admin Delete] Database delete error:", deleteError)
+      return NextResponse.json({ 
+        error: "Failed to delete asset", 
+        details: deleteError.message 
+      }, { status: 500 })
     }
+
+    console.log(`[Admin Delete] Successfully deleted asset: ${componentName}`)
 
     return NextResponse.json({ 
       success: true, 
