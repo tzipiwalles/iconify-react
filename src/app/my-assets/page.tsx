@@ -14,8 +14,10 @@ import {
   X,
   Palette,
   Globe,
-  Lock
+  Lock,
+  Zap
 } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ShareModal } from "@/components/share-modal"
 import { ColorEditor } from "@/components/color-editor"

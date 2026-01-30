@@ -272,7 +272,28 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <SiteHeader showBackButton={true} />
+      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="rounded-xl">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-orange-600 shadow-lg">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight">Admin Dashboard</h1>
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  User & Asset Analytics
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Main content */}
       <main className="mx-auto max-w-7xl px-6 py-8">
