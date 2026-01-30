@@ -236,6 +236,8 @@ export default function CreatePage() {
       <SiteHeader 
         showBackButton={true} 
         onLoginClick={() => setShowAuthModal(true)}
+        title="Create Asset"
+        subtitle="Convert your image to SVG"
       />
 
       {/* Main content */}

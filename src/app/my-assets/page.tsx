@@ -314,7 +314,11 @@ export default function MyAssetsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <SiteHeader showBackButton={true} />
+      <SiteHeader 
+        showBackButton={true}
+        title="My Assets"
+        subtitle={`${assets.length} saved conversion${assets.length !== 1 ? "s" : ""}`}
+      />
 
       {/* Main content */}
       <main className="mx-auto max-w-7xl px-6 py-12">

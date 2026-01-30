@@ -14,13 +14,17 @@ interface SiteHeaderProps {
   backHref?: string
   showAuth?: boolean
   onLoginClick?: () => void
+  title?: string
+  subtitle?: string
 }
 
 export function SiteHeader({ 
   showBackButton = false, 
   backHref = "/",
   showAuth = true,
-  onLoginClick
+  onLoginClick,
+  title,
+  subtitle
 }: SiteHeaderProps) {
   const { user, loading: authLoading } = useAuth()
   const { asset: brandLogo } = useSavedAsset(BRAND_LOGO_NAME)
@@ -40,8 +44,8 @@ export function SiteHeader({
           <Link href="/" className="flex items-center gap-2 sm:gap-3.5">
             <div className={`flex items-center justify-center rounded-xl shadow-lg overflow-hidden ${
               brandLogo?.svgUrl 
-                ? "h-9 w-9 sm:h-12 sm:w-12 bg-black p-0.5 sm:p-1" 
-                : "h-8 w-8 sm:h-10 sm:w-10 bg-gradient-to-br from-primary to-purple-600 shadow-primary/20"
+                ? "h-9 w-9 sm:h-10 sm:w-10 bg-black p-0.5 sm:p-1" 
+                : "h-8 w-8 sm:h-9 sm:w-9 bg-gradient-to-br from-primary to-purple-600 shadow-primary/20"
             }`}>
               {brandLogo?.svgUrl ? (
                 <img 
@@ -50,18 +54,31 @@ export function SiteHeader({
                   className="h-full w-full object-contain"
                 />
               ) : (
-                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                <Zap className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-white" />
               )}
             </div>
-            <div>
-              <div className="text-base sm:text-lg font-bold tracking-tight">
+            <div className="hidden sm:block">
+              <div className="text-sm font-bold tracking-tight">
                 Asset-Bridge
               </div>
-              <p className="hidden sm:block text-[11px] font-medium text-muted-foreground">
+              <p className="text-[10px] font-medium text-muted-foreground">
                 Host Images for AI Previews
               </p>
             </div>
           </Link>
+
+          {title && (
+            <div className="flex items-center gap-2 sm:gap-3.5 border-l border-border/50 pl-3 sm:pl-4">
+              <div>
+                <h1 className="text-base sm:text-lg font-bold tracking-tight">{title}</h1>
+                {subtitle && (
+                  <p className="text-[11px] font-medium text-muted-foreground">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3">

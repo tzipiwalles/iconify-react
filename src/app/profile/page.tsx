@@ -118,7 +118,11 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <SiteHeader showBackButton={true} />
+      <SiteHeader 
+        showBackButton={true}
+        title="Profile & Settings"
+        subtitle="Manage your account and API access"
+      />
 
       {/* Main content */}
       <main className="mx-auto max-w-4xl px-6 py-8">
