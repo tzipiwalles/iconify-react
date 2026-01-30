@@ -4,10 +4,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { UserMenu } from "@/components/user-menu"
 import { 
-  Zap, 
-  ArrowLeft, 
   Trash2, 
   Download, 
   MoreVertical,
@@ -19,10 +16,10 @@ import {
   Globe,
   Lock
 } from "lucide-react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ShareModal } from "@/components/share-modal"
 import { ColorEditor } from "@/components/color-editor"
+import { SiteHeader } from "@/components/site-header"
 
 interface Asset {
   id: string
@@ -315,30 +312,7 @@ export default function MyAssetsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon" className="rounded-xl">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/20">
-                <Zap className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold tracking-tight">My Assets</h1>
-                <p className="text-[11px] font-medium text-muted-foreground">
-                  {assets.length} saved conversion{assets.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <UserMenu />
-        </div>
-      </header>
+      <SiteHeader showBackButton={true} />
 
       {/* Main content */}
       <main className="mx-auto max-w-7xl px-6 py-12">

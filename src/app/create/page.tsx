@@ -5,18 +5,14 @@ import { UploadZone } from "@/components/upload-zone"
 import { SettingsPanel, OutputMode } from "@/components/settings-panel"
 import { ResultsPanel } from "@/components/results-panel"
 import { Button } from "@/components/ui/button"
-import { Zap, Github, ArrowLeft, Save, LogIn } from "lucide-react"
+import { Save, LogIn } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import { useConversionCount } from "@/hooks/use-conversion-count"
-import { useSavedAsset } from "@/hooks/use-saved-asset"
 import { AuthModal } from "@/components/auth-modal"
-import { UserMenu } from "@/components/user-menu"
+import { SiteHeader } from "@/components/site-header"
 import { createClient } from "@/lib/supabase/client"
 import { trackEvent } from "@/lib/track-event"
-
-// Brand logo component name
-const BRAND_LOGO_NAME = "ABmini"
 
 interface ProcessedResult {
   componentName: string
@@ -42,7 +38,6 @@ export default function CreatePage() {
   
   const { user, loading: authLoading } = useAuth()
   const { count: conversionCount, incrementCount, hasUsedFreeConversion, isLoaded: countLoaded } = useConversionCount()
-  const { asset: brandLogo } = useSavedAsset(BRAND_LOGO_NAME)
 
   const MAX_FILE_SIZE = 4 * 1024 * 1024
   const getMinFileSize = () => mode === "icon" ? 500 : 5000
@@ -238,70 +233,10 @@ export default function CreatePage() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 sm:h-16 max-w-6xl items-center justify-between px-3 sm:px-6">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2 sm:gap-3.5">
-              <div className={`flex items-center justify-center rounded-xl shadow-lg overflow-hidden ${
-                brandLogo?.svgUrl 
-                  ? "h-9 w-9 sm:h-12 sm:w-12 bg-black p-0.5 sm:p-1" 
-                  : "h-8 w-8 sm:h-10 sm:w-10 bg-gradient-to-br from-primary to-purple-600 shadow-primary/20"
-              }`}>
-                {brandLogo?.svgUrl ? (
-                  <img 
-                    src={brandLogo.svgUrl} 
-                    alt="Asset-Bridge Logo" 
-                    className="h-full w-full object-contain"
-                  />
-                ) : (
-                  <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                )}
-              </div>
-              <div>
-                <div className="text-base sm:text-lg font-bold tracking-tight">
-                  Create Asset
-                </div>
-                <p className="hidden sm:block text-[11px] font-medium text-muted-foreground">
-                  Convert your image to SVG
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-3">
-            <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 sm:h-10 sm:w-10" asChild>
-              <a
-                href="https://github.com/tzipiwalles/iconify-react"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Github className="h-4 w-4 sm:h-5 sm:w-5" />
-              </a>
-            </Button>
-            
-            {!authLoading && (
-              user ? (
-                <UserMenu />
-              ) : (
-                <Button
-                  onClick={() => setShowAuthModal(true)}
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 sm:gap-2 rounded-xl text-xs sm:text-sm px-2.5 sm:px-4"
-                >
-                  <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span>Sign in</span>
-                </Button>
-              )
-            )}
-          </div>
-        </div>
-      </header>
+      <SiteHeader 
+        showBackButton={true} 
+        onLoginClick={() => setShowAuthModal(true)}
+      />
 
       {/* Main content */}
       <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">

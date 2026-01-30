@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { 
-  ArrowLeft, 
   Key, 
   Copy, 
   Check, 
@@ -15,8 +14,8 @@ import {
   Mail,
   Shield
 } from "lucide-react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { SiteHeader } from "@/components/site-header"
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth()
@@ -119,18 +118,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon" className="rounded-xl">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <h1 className="text-lg font-bold tracking-tight">Profile & Settings</h1>
-          </div>
-        </div>
-      </header>
+      <SiteHeader showBackButton={true} />
 
       {/* Main content */}
       <main className="mx-auto max-w-4xl px-6 py-8">
