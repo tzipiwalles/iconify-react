@@ -30,7 +30,8 @@ export async function GET(request: Request) {
       .eq("event_type", "generate_click")
     
     if (excludedUserIds.length > 0) {
-      generateClicksQuery = generateClicksQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+      // Filter: only include events where user_id is null OR not in excluded list
+      generateClicksQuery = generateClicksQuery.or(`user_id.is.null,user_id.not.in.(${excludedUserIds.join(',')})`)
     }
     
     const { count: generateClicks } = await generateClicksQuery
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
       .eq("event_type", "generate_success")
     
     if (excludedUserIds.length > 0) {
-      generateSuccessQuery = generateSuccessQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+      generateSuccessQuery = generateSuccessQuery.or(`user_id.is.null,user_id.not.in.(${excludedUserIds.join(',')})`)
     }
     
     const { count: generateSuccess } = await generateSuccessQuery
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
       .eq("event_type", "save_asset")
     
     if (excludedUserIds.length > 0) {
-      saveAssetsQuery = saveAssetsQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+      saveAssetsQuery = saveAssetsQuery.or(`user_id.is.null,user_id.not.in.(${excludedUserIds.join(',')})`)
     }
     
     const { count: saveAssets } = await saveAssetsQuery
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
       .eq("event_type", "generate_click")
     
     if (excludedUserIds.length > 0) {
-      uniqueGeneratorsQuery = uniqueGeneratorsQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+      uniqueGeneratorsQuery = uniqueGeneratorsQuery.or(`user_id.is.null,user_id.not.in.(${excludedUserIds.join(',')})`)
     }
     
     const { data: uniqueGenerators } = await uniqueGeneratorsQuery
@@ -84,7 +85,7 @@ export async function GET(request: Request) {
       .gte("created_at", today.toISOString())
     
     if (excludedUserIds.length > 0) {
-      todayGeneratesQuery = todayGeneratesQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+      todayGeneratesQuery = todayGeneratesQuery.or(`user_id.is.null,user_id.not.in.(${excludedUserIds.join(',')})`)
     }
     
     const { count: todayGenerates } = await todayGeneratesQuery
@@ -97,7 +98,7 @@ export async function GET(request: Request) {
       .limit(50)
     
     if (excludedUserIds.length > 0) {
-      recentEventsQuery = recentEventsQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+      recentEventsQuery = recentEventsQuery.or(`user_id.is.null,user_id.not.in.(${excludedUserIds.join(',')})`)
     }
     
     const { data: recentEvents } = await recentEventsQuery
