@@ -13,7 +13,9 @@ import {
   Activity,
   Zap,
   Target,
-  TrendingUp
+  TrendingUp,
+  Filter,
+  X
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -88,6 +90,8 @@ export default function AdminPage() {
   const [loadingApiUsage, setLoadingApiUsage] = useState(true)
   const [loadingEvents, setLoadingEvents] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [excludedUserIds, setExcludedUserIds] = useState<Set<string>>(new Set())
+  const [showUserFilter, setShowUserFilter] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -103,6 +107,13 @@ export default function AdminPage() {
       fetchEventStats()
     }
   }, [user])
+
+  // Refetch event stats when excluded users change
+  useEffect(() => {
+    if (user && data) {
+      fetchEventStats()
+    }
+  }, [excludedUserIds, user, data])
 
   const fetchAdminData = async () => {
     try {
@@ -177,7 +188,12 @@ export default function AdminPage() {
   const fetchEventStats = async () => {
     try {
       setLoadingEvents(true)
-      const response = await fetch("/api/admin/events")
+      const excludedUsersParam = Array.from(excludedUserIds).join(',')
+      const url = excludedUsersParam 
+        ? `/api/admin/events?excludedUsers=${excludedUsersParam}`
+        : "/api/admin/events"
+      
+      const response = await fetch(url)
       
       if (!response.ok) {
         console.log("Event stats not available yet:", response.status)
@@ -194,6 +210,39 @@ export default function AdminPage() {
       setLoadingEvents(false)
     }
   }
+
+  const toggleUserExclusion = (userId: string) => {
+    setExcludedUserIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(userId)) {
+        newSet.delete(userId)
+      } else {
+        newSet.add(userId)
+      }
+      return newSet
+    })
+  }
+
+  // Calculate filtered data
+  const getFilteredData = () => {
+    if (!data) return null
+
+    const filteredUsers = data.users.filter(u => !excludedUserIds.has(u.id))
+    
+    const totals = {
+      totalUsers: filteredUsers.length,
+      totalAssets: filteredUsers.reduce((sum, u) => sum + u.totalAssets, 0),
+      totalIcons: filteredUsers.reduce((sum, u) => sum + u.iconCount, 0),
+      totalLogos: filteredUsers.reduce((sum, u) => sum + u.logoCount, 0),
+    }
+
+    return {
+      users: filteredUsers,
+      totals
+    }
+  }
+
+  const filteredData = getFilteredData()
 
   if (authLoading || loading) {
     return (
@@ -246,6 +295,79 @@ export default function AdminPage() {
 
       {/* Main content */}
       <main className="mx-auto max-w-7xl px-6 py-8">
+        {/* User Filter Section */}
+        {data && data.users.length > 0 && (
+          <div className="mb-6 rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10">
+                  <Filter className="h-5 w-5 text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Filter Users</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {excludedUserIds.size > 0 
+                      ? `${excludedUserIds.size} user${excludedUserIds.size > 1 ? 's' : ''} excluded from stats`
+                      : 'Click users to exclude them from statistics'}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant={showUserFilter ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setShowUserFilter(!showUserFilter)}
+                className="gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                {showUserFilter ? "Hide" : "Show"} Filter
+              </Button>
+            </div>
+
+            {showUserFilter && (
+              <div className="mt-4 space-y-2 border-t border-border pt-4">
+                {data.users.map(userItem => (
+                  <div
+                    key={userItem.id}
+                    onClick={() => toggleUserExclusion(userItem.id)}
+                    className={`
+                      flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all
+                      ${excludedUserIds.has(userItem.id)
+                        ? 'border-destructive/50 bg-destructive/5 opacity-60'
+                        : 'border-border bg-card hover:bg-muted/50'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`
+                        flex h-8 w-8 items-center justify-center rounded-lg text-sm font-semibold text-white
+                        ${excludedUserIds.has(userItem.id)
+                          ? 'bg-muted'
+                          : 'bg-gradient-to-br from-primary to-purple-600'
+                        }
+                      `}>
+                        {(userItem.fullName || userItem.email)?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className={`font-medium ${excludedUserIds.has(userItem.id) ? 'line-through' : ''}`}>
+                          {userItem.fullName || userItem.email}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {userItem.iconCount} icons • {userItem.logoCount} logos
+                        </p>
+                      </div>
+                    </div>
+                    {excludedUserIds.has(userItem.id) && (
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive/20">
+                        <X className="h-4 w-4 text-destructive" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-border bg-card p-6">
@@ -255,7 +377,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-3xl font-bold">{data?.totals.totalUsers || 0}</p>
+                <p className="text-3xl font-bold">{filteredData?.totals.totalUsers || 0}</p>
               </div>
             </div>
           </div>
@@ -267,7 +389,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Assets</p>
-                <p className="text-3xl font-bold">{data?.totals.totalAssets || 0}</p>
+                <p className="text-3xl font-bold">{filteredData?.totals.totalAssets || 0}</p>
               </div>
             </div>
           </div>
@@ -279,7 +401,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Icons Created</p>
-                <p className="text-3xl font-bold">{data?.totals.totalIcons || 0}</p>
+                <p className="text-3xl font-bold">{filteredData?.totals.totalIcons || 0}</p>
               </div>
             </div>
           </div>
@@ -291,7 +413,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Logos Created</p>
-                <p className="text-3xl font-bold">{data?.totals.totalLogos || 0}</p>
+                <p className="text-3xl font-bold">{filteredData?.totals.totalLogos || 0}</p>
               </div>
             </div>
           </div>
@@ -412,7 +534,20 @@ export default function AdminPage() {
         {/* Users Table */}
         <div className="rounded-2xl border border-border bg-card">
           <div className="border-b border-border p-4">
-            <h2 className="text-lg font-semibold">All Users</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">All Users</h2>
+              {excludedUserIds.size > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExcludedUserIds(new Set())}
+                  className="gap-2 text-xs"
+                >
+                  <X className="h-3 w-3" />
+                  Clear Filter ({excludedUserIds.size})
+                </Button>
+              )}
+            </div>
           </div>
           
           <div className="overflow-x-auto">
@@ -427,41 +562,63 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {data?.users.map((userItem) => (
-                  <tr key={userItem.id} className="border-b border-border/50 transition-colors hover:bg-muted/20">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-purple-600 text-sm font-semibold text-white">
-                          {(userItem.fullName || userItem.email)?.charAt(0).toUpperCase()}
+                {data?.users.map((userItem) => {
+                  const isExcluded = excludedUserIds.has(userItem.id)
+                  return (
+                    <tr 
+                      key={userItem.id} 
+                      className={`
+                        border-b border-border/50 transition-colors hover:bg-muted/20
+                        ${isExcluded ? 'opacity-40 bg-destructive/5' : ''}
+                      `}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`
+                            flex h-8 w-8 items-center justify-center rounded-lg text-sm font-semibold text-white
+                            ${isExcluded 
+                              ? 'bg-muted' 
+                              : 'bg-gradient-to-br from-primary to-purple-600'
+                            }
+                          `}>
+                            {(userItem.fullName || userItem.email)?.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className={`font-medium ${isExcluded ? 'line-through' : ''}`}>
+                              {userItem.fullName || "No name"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{userItem.email}</p>
+                          </div>
+                          {isExcluded && (
+                            <span className="ml-2 rounded-full bg-destructive/20 px-2 py-0.5 text-xs font-medium text-destructive">
+                              Filtered
+                            </span>
+                          )}
                         </div>
-                        <div>
-                          <p className="font-medium">{userItem.fullName || "No name"}</p>
-                          <p className="text-xs text-muted-foreground">{userItem.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      {new Date(userItem.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-medium text-primary">
-                        {userItem.iconCount}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-purple-500/10 px-2 text-xs font-medium text-purple-400">
-                        {userItem.logoCount}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center font-semibold">
-                      {userItem.totalAssets}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {new Date(userItem.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-medium text-primary">
+                          {userItem.iconCount}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-purple-500/10 px-2 text-xs font-medium text-purple-400">
+                          {userItem.logoCount}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center font-semibold">
+                        {userItem.totalAssets}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

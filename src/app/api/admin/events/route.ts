@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -14,31 +14,60 @@ export async function GET() {
       )
     }
 
+    // Get excluded user IDs from query params
+    const { searchParams } = new URL(request.url)
+    const excludedUsersParam = searchParams.get('excludedUsers')
+    const excludedUserIds = excludedUsersParam ? excludedUsersParam.split(',') : []
+
     // Get event stats using the function
     const { data: eventStats, error: statsError } = await supabase
       .rpc("get_event_stats")
 
-    // Get totals for key events
-    const { count: generateClicks } = await supabase
+    // Build query for events, excluding specified users
+    let generateClicksQuery = supabase
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("event_type", "generate_click")
+    
+    if (excludedUserIds.length > 0) {
+      generateClicksQuery = generateClicksQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+    }
+    
+    const { count: generateClicks } = await generateClicksQuery
 
-    const { count: generateSuccess } = await supabase
+    let generateSuccessQuery = supabase
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("event_type", "generate_success")
+    
+    if (excludedUserIds.length > 0) {
+      generateSuccessQuery = generateSuccessQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+    }
+    
+    const { count: generateSuccess } = await generateSuccessQuery
 
-    const { count: saveAssets } = await supabase
+    let saveAssetsQuery = supabase
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("event_type", "save_asset")
+    
+    if (excludedUserIds.length > 0) {
+      saveAssetsQuery = saveAssetsQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+    }
+    
+    const { count: saveAssets } = await saveAssetsQuery
 
     // Get unique users who clicked generate
-    const { data: uniqueGenerators } = await supabase
+    let uniqueGeneratorsQuery = supabase
       .from("events")
       .select("user_id, session_id")
       .eq("event_type", "generate_click")
+    
+    if (excludedUserIds.length > 0) {
+      uniqueGeneratorsQuery = uniqueGeneratorsQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+    }
+    
+    const { data: uniqueGenerators } = await uniqueGeneratorsQuery
 
     const uniqueGenerateUsers = new Set(
       uniqueGenerators?.map(e => e.user_id || e.session_id) || []
@@ -48,18 +77,30 @@ export async function GET() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    const { count: todayGenerates } = await supabase
+    let todayGeneratesQuery = supabase
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("event_type", "generate_click")
       .gte("created_at", today.toISOString())
+    
+    if (excludedUserIds.length > 0) {
+      todayGeneratesQuery = todayGeneratesQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+    }
+    
+    const { count: todayGenerates } = await todayGeneratesQuery
 
     // Get recent events
-    const { data: recentEvents } = await supabase
+    let recentEventsQuery = supabase
       .from("events")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(50)
+    
+    if (excludedUserIds.length > 0) {
+      recentEventsQuery = recentEventsQuery.not("user_id", "in", `(${excludedUserIds.join(',')})`)
+    }
+    
+    const { data: recentEvents } = await recentEventsQuery
 
     return NextResponse.json({
       success: true,
