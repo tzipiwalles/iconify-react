@@ -8,7 +8,6 @@ import { useAuth } from "@/contexts/auth-context"
 import { useSavedAsset } from "@/hooks/use-saved-asset"
 
 const BRAND_LOGO_NAME = "Amodernminimalisttechlogo"
-const BRAND_LOGO_FALLBACK_URL = "https://www.assetbridge.app/api/assets/Amodernminimalisttechlogo/svg"
 
 interface SiteHeaderProps {
   showBackButton?: boolean
@@ -43,16 +42,20 @@ export function SiteHeader({
           )}
           
           <Link href="/" className="flex items-center gap-2 sm:gap-3.5">
-            <div className="flex items-center justify-center rounded-xl shadow-lg overflow-hidden h-9 w-9 sm:h-10 sm:w-10 bg-black p-0.5 sm:p-1">
-              <img 
-                src={brandLogo?.svgUrl || BRAND_LOGO_FALLBACK_URL} 
-                alt="Asset-Bridge Logo" 
-                className="h-full w-full object-contain"
-                onError={(e) => {
-                  // Hide image if fails to load
-                  (e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
+            <div className={`flex items-center justify-center rounded-xl shadow-lg overflow-hidden ${
+              brandLogo?.svgUrl 
+                ? "h-9 w-9 sm:h-10 sm:w-10 bg-black p-0.5 sm:p-1" 
+                : "h-8 w-8 sm:h-9 sm:w-9 bg-gradient-to-br from-primary to-purple-600 shadow-primary/20"
+            }`}>
+              {brandLogo?.svgUrl ? (
+                <img 
+                  src={brandLogo.svgUrl} 
+                  alt="Asset-Bridge Logo" 
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <Zap className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-white" />
+              )}
             </div>
             <div className="hidden sm:block">
               <div className="text-sm font-bold tracking-tight">

@@ -18,7 +18,6 @@ import { createClient } from "@/lib/supabase/client"
 
 // Brand logo component name
 const BRAND_LOGO_NAME = "Amodernminimalisttechlogo"
-const BRAND_LOGO_FALLBACK_URL = "https://www.assetbridge.app/api/assets/Amodernminimalisttechlogo/svg"
 
 interface PublicAsset {
   id: string
@@ -122,12 +121,20 @@ export default function Home() {
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 sm:h-16 max-w-6xl items-center justify-between px-3 sm:px-6">
           <div className="flex items-center gap-2 sm:gap-3.5">
-            <div className="flex items-center justify-center rounded-xl shadow-lg overflow-hidden h-9 w-9 sm:h-12 sm:w-12 bg-black p-0.5 sm:p-1">
-              <img 
-                src={brandLogo?.svgUrl || BRAND_LOGO_FALLBACK_URL} 
-                alt="Asset-Bridge Logo" 
-                className="h-full w-full object-contain"
-              />
+            <div className={`flex items-center justify-center rounded-xl shadow-lg overflow-hidden ${
+              brandLogo?.svgUrl 
+                ? "h-9 w-9 sm:h-12 sm:w-12 bg-black p-0.5 sm:p-1" 
+                : "h-8 w-8 sm:h-10 sm:w-10 bg-gradient-to-br from-primary to-purple-600 shadow-primary/20"
+            }`}>
+              {brandLogo?.svgUrl ? (
+                <img 
+                  src={brandLogo.svgUrl} 
+                  alt="Asset-Bridge Logo" 
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              )}
             </div>
             <div>
               <div className="text-base sm:text-lg font-bold tracking-tight">
