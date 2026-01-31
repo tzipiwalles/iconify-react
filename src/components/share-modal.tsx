@@ -8,6 +8,7 @@ interface ShareModalProps {
   isOpen: boolean
   onClose: () => void
   asset: {
+    id?: string
     component_name: string
     react_component: string
     svg_url: string
