@@ -16,7 +16,11 @@ import {
   Clock,
   LogIn,
   Link as LinkIcon,
+  Share2,
+  Globe,
+  Lock,
 } from "lucide-react"
+import { ShareModal } from "@/components/share-modal"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -29,6 +33,8 @@ interface ProcessedResult {
   publicUrl: string | null
   originalFileName: string
   detectedColors?: string[]
+  assetId?: string | null
+  mode?: string
 }
 
 interface ResultsPanelProps {
@@ -42,6 +48,9 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
   const [copiedComponent, setCopiedComponent] = useState(false)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedPrompt, setCopiedPrompt] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [isPublic, setIsPublic] = useState(false)
+  const [togglingVisibility, setTogglingVisibility] = useState(false)
   
   const [background, setBackground] = useState<BackgroundType>("white")
   
@@ -107,6 +116,27 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
     } else {
       setCopiedComponent(true)
       setTimeout(() => setCopiedComponent(false), 2000)
+    }
+  }
+
+  const handleToggleVisibility = async () => {
+    if (!result?.assetId) return
+    
+    setTogglingVisibility(true)
+    try {
+      const response = await fetch(`/api/assets/${result.componentName}/visibility`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: isPublic ? "private" : "public" }),
+      })
+      
+      if (response.ok) {
+        setIsPublic(!isPublic)
+      }
+    } catch (error) {
+      console.error("Failed to toggle visibility:", error)
+    } finally {
+      setTogglingVisibility(false)
     }
   }
 
@@ -218,6 +248,43 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
               </>
             )}
           </Button>
+        </div>
+
+        {/* Action Buttons: Share & Make Public */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            onClick={() => setShowShareModal(true)}
+            variant="outline"
+            size="sm"
+            className="gap-2 bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
+          >
+            <Share2 className="h-4 w-4" />
+            Share & Embed
+          </Button>
+          
+          {result?.assetId && (
+            <Button
+              onClick={handleToggleVisibility}
+              variant="outline"
+              size="sm"
+              disabled={togglingVisibility}
+              className={cn(
+                "gap-2",
+                isPublic 
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" 
+                  : "bg-gray-500/10 border-gray-500/30 text-gray-400 hover:bg-gray-500/20"
+              )}
+            >
+              {togglingVisibility ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+              ) : isPublic ? (
+                <Globe className="h-4 w-4" />
+              ) : (
+                <Lock className="h-4 w-4" />
+              )}
+              {isPublic ? "Public" : "Private"}
+            </Button>
+          )}
         </div>
 
         {/* Guest Warning Banner */}
@@ -500,6 +567,24 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
         </TabsContent>
         </Tabs>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && result && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          asset={{
+            id: result.assetId || "",
+            component_name: result.componentName,
+            svg_url: result.publicUrl || hostedUrl,
+            react_component: result.reactComponent,
+            mode: (result.mode as "icon" | "logo") || "icon",
+            detected_colors: result.detectedColors || [],
+            visibility: isPublic ? "public" : "private",
+          }}
+          baseUrl={typeof window !== "undefined" ? window.location.origin : "https://www.assetbridge.app"}
+        />
+      )}
     </div>
   )
 }

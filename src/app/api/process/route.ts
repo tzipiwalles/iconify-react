@@ -1609,6 +1609,62 @@ export async function POST(request: NextRequest) {
       incrementRateLimit(clientIP)
     }
     
+    // Auto-save asset to database
+    let savedAssetId: string | null = null
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const originalFileName = `${user?.id || 'anonymous'}/${componentName}_original_${timestamp}${path.extname(fileName)}`
+        
+        const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
+        const supabaseAdmin = createSupabaseClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.SUPABASE_SERVICE_ROLE_KEY
+        )
+        
+        // Upload original file
+        await supabaseAdmin.storage
+          .from("assets")
+          .upload(`originals/${originalFileName}`, file, {
+            contentType: fileType,
+            upsert: true,
+          })
+        
+        const { data: { publicUrl: originalUrl } } = supabaseAdmin.storage
+          .from("assets")
+          .getPublicUrl(`originals/${originalFileName}`)
+        
+        // Insert asset record
+        const { data: assetData, error: insertError } = await supabaseAdmin
+          .from("assets")
+          .insert({
+            user_id: user?.id || null,
+            original_filename: fileName,
+            original_url: originalUrl,
+            original_size_bytes: file.size,
+            mode: mode,
+            component_name: componentName,
+            remove_background: removeBackground,
+            svg_url: publicUrl,
+            react_component: reactComponent,
+            detected_colors: mode === "logo" ? detectedColors : [],
+            visibility: "private",
+          })
+          .select()
+          .single()
+        
+        if (insertError) {
+          console.error("[API] Failed to save asset to DB:", insertError)
+        } else {
+          savedAssetId = assetData.id
+          console.log(`[API] 💾 Asset saved to DB: ${savedAssetId}`)
+        }
+      } catch (dbError) {
+        console.error("[API] Database save error:", dbError)
+      }
+    } else {
+      console.log("[API] Skipping DB save - Supabase not configured")
+    }
+    
     return NextResponse.json({
       success: true,
       data: {
@@ -1619,6 +1675,7 @@ export async function POST(request: NextRequest) {
         originalFileName: fileName,
         detectedColors: mode === "logo" ? detectedColors : [],
         mode,
+        assetId: savedAssetId,  // Return the saved asset ID
       },
     })
   } catch (error) {

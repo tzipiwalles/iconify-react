@@ -5,13 +5,12 @@ import { UploadZone } from "@/components/upload-zone"
 import { SettingsPanel, OutputMode } from "@/components/settings-panel"
 import { ResultsPanel } from "@/components/results-panel"
 import { Button } from "@/components/ui/button"
-import { Save, LogIn, Zap } from "lucide-react"
+import { Zap } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import { useConversionCount } from "@/hooks/use-conversion-count"
 import { AuthModal } from "@/components/auth-modal"
 import { SiteHeader } from "@/components/site-header"
-import { createClient } from "@/lib/supabase/client"
 import { trackEvent } from "@/lib/track-event"
 
 interface ProcessedResult {
@@ -21,6 +20,8 @@ interface ProcessedResult {
   publicUrl: string | null
   originalFileName: string
   detectedColors?: string[]
+  assetId?: string | null
+  mode?: string
 }
 
 export default function CreatePage() {
@@ -33,8 +34,6 @@ export default function CreatePage() {
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [savedAssetId, setSavedAssetId] = useState<string | null>(null)
   
   const { user, loading: authLoading } = useAuth()
   const { count: conversionCount, incrementCount, hasUsedFreeConversion, isLoaded: countLoaded } = useConversionCount()
@@ -155,71 +154,6 @@ export default function CreatePage() {
     }
   }
 
-  const handleSaveAsset = async () => {
-    if (!user || !result || !selectedFile) return
-    
-    setIsSaving(true)
-    setError(null)
-
-    try {
-      const supabase = createClient()
-
-      const originalFileName = `${user.id}/${Date.now()}_${selectedFile.name}`
-      const { error: uploadOriginalError } = await supabase.storage
-        .from("assets")
-        .upload(`originals/${originalFileName}`, selectedFile)
-
-      if (uploadOriginalError) throw uploadOriginalError
-
-      const { data: { publicUrl: originalUrl } } = supabase.storage
-        .from("assets")
-        .getPublicUrl(`originals/${originalFileName}`)
-
-      const svgFileName = `${user.id}/${result.componentName}_${Date.now()}.svg`
-      const { error: uploadSvgError } = await supabase.storage
-        .from("assets")
-        .upload(`outputs/${svgFileName}`, new Blob([result.optimizedSvg], { type: "image/svg+xml" }))
-
-      if (uploadSvgError) throw uploadSvgError
-
-      const { data: { publicUrl: svgUrl } } = supabase.storage
-        .from("assets")
-        .getPublicUrl(`outputs/${svgFileName}`)
-
-      const { data: asset, error: dbError } = await supabase
-        .from("assets")
-        .insert({
-          user_id: user.id,
-          original_filename: selectedFile.name,
-          original_url: originalUrl,
-          original_size_bytes: selectedFile.size,
-          mode: mode,
-          component_name: result.componentName,
-          remove_background: removeBackground,
-          svg_url: svgUrl,
-          react_component: result.reactComponent,
-          detected_colors: result.detectedColors || [],
-          visibility: "public",
-        })
-        .select()
-        .single()
-
-      if (dbError) throw dbError
-
-      setSavedAssetId(asset.id)
-      
-      trackEvent("save_asset", {
-        mode,
-        componentName: result.componentName,
-      })
-    } catch (err) {
-      console.error("Save error:", err)
-      setError(err instanceof Error ? err.message : "Failed to save asset")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   return (
     <div className="dark min-h-screen bg-background">
       {/* Decorative background */}
@@ -315,40 +249,24 @@ export default function CreatePage() {
               </span>
             </Button>
 
-            {result && !savedAssetId && (
-              <Button
-                onClick={user ? handleSaveAsset : () => setShowAuthModal(true)}
-                disabled={isSaving}
-                variant="outline"
-                className="h-12 w-full gap-2 rounded-xl text-base font-semibold"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-                    Saving...
-                  </>
-                ) : user ? (
-                  <>
-                    <Save className="h-5 w-5" />
-                    Save & Get Permanent URL
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="h-5 w-5" />
-                    Sign in to Save
-                  </>
-                )}
-              </Button>
-            )}
-
-            {savedAssetId && (
+            {/* Success message when asset is created */}
+            {result?.assetId && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
                 <p className="text-sm font-medium text-emerald-400">
-                  ✓ Asset saved successfully!
+                  ✓ Logo created successfully!
                 </p>
-                <Link href="/my-assets" className="mt-2 inline-block text-xs text-emerald-400/70 hover:underline">
-                  View in My Assets →
-                </Link>
+                {user ? (
+                  <Link href="/my-assets" className="mt-2 inline-block text-xs text-emerald-400/70 hover:underline">
+                    View in My Assets →
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={() => setShowAuthModal(true)}
+                    className="mt-2 inline-block text-xs text-emerald-400/70 hover:underline"
+                  >
+                    Sign in to manage your assets →
+                  </button>
+                )}
               </div>
             )}
           </div>
