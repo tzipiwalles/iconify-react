@@ -17,7 +17,7 @@ import { isAdmin } from "@/lib/admin"
 import { createClient } from "@/lib/supabase/client"
 
 // Brand logo component name
-const BRAND_LOGO_NAME = "ABmini"
+const BRAND_LOGO_NAME = "Amodernminimalisttechlogo"
 
 interface PublicAsset {
   id: string

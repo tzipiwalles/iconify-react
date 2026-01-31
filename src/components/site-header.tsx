@@ -7,7 +7,7 @@ import { ArrowLeft, Github, Zap } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useSavedAsset } from "@/hooks/use-saved-asset"
 
-const BRAND_LOGO_NAME = "ABmini"
+const BRAND_LOGO_NAME = "Amodernminimalisttechlogo"
 
 interface SiteHeaderProps {
   showBackButton?: boolean
