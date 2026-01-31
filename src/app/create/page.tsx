@@ -296,19 +296,23 @@ export default function CreatePage() {
             <Button
               onClick={handleProcess}
               disabled={!selectedFile || isProcessing || !!error}
-              className="h-12 w-full gap-2 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-base font-semibold shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
+              className="group relative h-12 w-full gap-2 overflow-hidden rounded-xl text-base font-semibold shadow-lg transition-all hover:shadow-xl hover:scale-[1.02]"
             >
-              {isProcessing ? (
-                <>
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-5 w-5" />
-                  Convert to SVG
-                </>
-              )}
+              {/* Animated gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-500 via-fuchsia-500 to-primary bg-[length:200%_100%] animate-[gradient_3s_ease-in-out_infinite]" />
+              <span className="relative flex items-center justify-center gap-2">
+                {isProcessing ? (
+                  <>
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-5 w-5" />
+                    Generate Logo
+                  </>
+                )}
+              </span>
             </Button>
 
             {result && !savedAssetId && (

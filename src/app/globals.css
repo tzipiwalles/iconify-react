@@ -109,6 +109,16 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
 }
 
+/* Animated gradient for buttons */
+@keyframes gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 /* Drag and drop zone animation */
 .dropzone-active {
   @apply border-primary bg-primary/5;

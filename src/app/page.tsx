@@ -201,10 +201,14 @@ export default function Home() {
           <Link href="/create">
             <Button
               size="lg"
-              className="h-14 px-8 gap-3 rounded-2xl bg-gradient-to-r from-primary to-purple-600 text-lg font-semibold shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-105"
+              className="group relative h-14 px-8 gap-3 overflow-hidden rounded-2xl text-lg font-semibold shadow-lg transition-all hover:shadow-xl hover:scale-105"
             >
-              <Plus className="h-6 w-6" />
-              Create My Icon
+              {/* Animated gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-500 via-fuchsia-500 to-primary bg-[length:200%_100%] animate-[gradient_3s_ease-in-out_infinite]" />
+              <span className="relative flex items-center gap-3">
+                <Zap className="h-6 w-6" />
+                Generate Logo
+              </span>
             </Button>
           </Link>
         </div>
