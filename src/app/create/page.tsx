@@ -96,7 +96,6 @@ export default function CreatePage() {
     setError(null)
     setWarning(null)
     setComponentName("")
-    setSavedAssetId(null)
   }
 
   const handleProcess = async () => {
@@ -104,7 +103,6 @@ export default function CreatePage() {
 
     setIsProcessing(true)
     setError(null)
-    setSavedAssetId(null)
 
     try {
       const formData = new FormData()
