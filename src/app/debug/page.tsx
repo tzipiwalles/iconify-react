@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { cn } from "@/lib/utils"
 import { SiteHeader } from "@/components/site-header"
+import { Zap } from "lucide-react"
 
 interface ProcessedResult {
   componentName: string
