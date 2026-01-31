@@ -134,13 +134,10 @@ export default function CreatePage() {
         throw new Error(data.error || "Processing failed")
       }
 
+      // API returns { success, data: { ... } } - use data.data
       setResult({
-        componentName: data.componentName,
-        optimizedSvg: data.optimizedSvg,
-        reactComponent: data.reactComponent,
-        publicUrl: data.publicUrl,
+        ...data.data,
         originalFileName: selectedFile.name,
-        detectedColors: data.detectedColors,
       })
 
       incrementCount()
@@ -149,7 +146,7 @@ export default function CreatePage() {
         mode,
         fileSize: selectedFile.size,
         fileType: selectedFile.type,
-        componentName: data.componentName,
+        componentName: data.data.componentName,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")

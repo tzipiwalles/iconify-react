@@ -1597,6 +1597,8 @@ export async function POST(request: NextRequest) {
 
     const totalTime = Date.now() - startTime
     console.log(`[API] ✅ Processing complete! Total time: ${totalTime}ms`)
+    console.log(`[API] SVG size: ${optimizedSvg.length} chars`)
+    console.log(`[API] SVG start: ${optimizedSvg.substring(0, 300)}...`)
     
     if (totalTime > 8000) {
       console.warn(`[API] ⚠️ WARNING: Processing took ${totalTime}ms - close to Vercel timeout`)

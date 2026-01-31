@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import {
@@ -41,7 +41,29 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
   const [copiedComponent, setCopiedComponent] = useState(false)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedPrompt, setCopiedPrompt] = useState(false)
-  const [background, setBackground] = useState<BackgroundType>("black")
+  
+  const [background, setBackground] = useState<BackgroundType>("white")
+  
+  // Auto-select background based on detected colors
+  // If colors are mostly dark, use white background for visibility
+  const suggestedBackground = useMemo((): BackgroundType => {
+    if (!result?.detectedColors?.length) return "white"
+    const darkColors = result.detectedColors.filter(color => {
+      const hex = color.replace('#', '')
+      const r = parseInt(hex.substring(0, 2), 16)
+      const g = parseInt(hex.substring(2, 4), 16)
+      const b = parseInt(hex.substring(4, 6), 16)
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+      return luminance < 0.5
+    })
+    // If most colors are dark, use white background
+    return darkColors.length > result.detectedColors.length / 2 ? "white" : "black"
+  }, [result?.detectedColors])
+  
+  // Update background when result changes
+  useEffect(() => {
+    setBackground(suggestedBackground)
+  }, [suggestedBackground])
 
   // Generate the hosted URL for AI tools
   const getHostedUrl = () => {
