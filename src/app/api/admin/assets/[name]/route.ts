@@ -67,12 +67,13 @@ export async function DELETE(
 
     // Delete from storage if exists
     if (asset.svg_url) {
-      // Extract path from URL: .../storage/v1/object/public/svgs/user_id/filename.svg
-      const urlParts = asset.svg_url.split("/svgs/")
+      // Extract path from URL: .../storage/v1/object/public/assets/outputs/user_id/filename.svg
+      // or: .../storage/v1/object/public/assets/svgs/filename.svg
+      const urlParts = asset.svg_url.split("/assets/")
       if (urlParts.length > 1) {
         const storagePath = urlParts[1]
         console.log(`[Admin Delete] Deleting from storage: ${storagePath}`)
-        const { error: storageError } = await supabaseAdmin.storage.from("svgs").remove([storagePath])
+        const { error: storageError } = await supabaseAdmin.storage.from("assets").remove([storagePath])
         if (storageError) {
           console.error("[Admin Delete] Storage delete error:", storageError)
           // Continue even if storage delete fails

@@ -1182,20 +1182,26 @@ export default function ${componentName}({ size = 24, className, ...props }) {
 
 /**
  * Uploads SVG to Supabase Storage and returns public URL
+ * Uses service role key to bypass RLS for server-side uploads
  */
 async function uploadToSupabase(
   svgContent: string,
   fileName: string
 ): Promise<string | null> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    console.log("Supabase not configured, skipping upload")
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log("Supabase not configured or missing service role key, skipping upload")
     return null
   }
 
   try {
-    const supabase = await createClient()
+    // Use service role key for server-side uploads to bypass RLS
+    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
 
-    const { data, error } = await supabase.storage
+    const { data, error } = await supabaseAdmin.storage
       .from("assets")
       .upload(`svgs/${fileName}`, svgContent, {
         contentType: "image/svg+xml",
@@ -1209,7 +1215,7 @@ async function uploadToSupabase(
 
     const {
       data: { publicUrl },
-    } = supabase.storage.from("assets").getPublicUrl(data.path)
+    } = supabaseAdmin.storage.from("assets").getPublicUrl(data.path)
 
     return publicUrl
   } catch (error) {
