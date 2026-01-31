@@ -13,6 +13,7 @@ interface ShareModalProps {
     react_component: string
     svg_url: string
     visibility: string
+    mode?: "icon" | "logo"
     detected_colors?: string[]
     additional_colors?: string[]
   }
