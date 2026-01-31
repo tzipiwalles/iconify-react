@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Zap } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
-import { useConversionCount } from "@/hooks/use-conversion-count"
 import { AuthModal } from "@/components/auth-modal"
 import { SiteHeader } from "@/components/site-header"
 import { trackEvent } from "@/lib/track-event"
@@ -35,8 +34,7 @@ export default function CreatePage() {
   const [warning, setWarning] = useState<string | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   
-  const { user, loading: authLoading } = useAuth()
-  const { count: conversionCount, incrementCount, hasUsedFreeConversion, isLoaded: countLoaded } = useConversionCount()
+  const { user } = useAuth()
 
   const MAX_FILE_SIZE = 4 * 1024 * 1024
   const getMinFileSize = () => mode === "icon" ? 500 : 5000
@@ -104,13 +102,6 @@ export default function CreatePage() {
   const handleProcess = async () => {
     if (!selectedFile) return
 
-    if (!countLoaded) return
-    
-    if (!user && hasUsedFreeConversion) {
-      setShowAuthModal(true)
-      return
-    }
-
     setIsProcessing(true)
     setError(null)
     setSavedAssetId(null)
@@ -139,8 +130,6 @@ export default function CreatePage() {
         originalFileName: selectedFile.name,
       })
 
-      incrementCount()
-      
       trackEvent("generate_success", {
         mode,
         fileSize: selectedFile.size,
@@ -277,7 +266,7 @@ export default function CreatePage() {
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
-        conversionCount={conversionCount}
+        conversionCount={0}
       />
     </div>
   )
