@@ -28,6 +28,7 @@ interface ProcessedResult {
   reactComponent: string
   publicUrl: string | null
   originalFileName: string
+  detectedColors?: string[]
 }
 
 interface ResultsPanelProps {
