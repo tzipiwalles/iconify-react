@@ -1643,7 +1643,7 @@ export async function POST(request: NextRequest) {
             original_size_bytes: file.size,
             mode: mode,
             component_name: componentName,
-            remove_background: removeBackground,
+            remove_background: shouldRemoveBackground,
             svg_url: publicUrl,
             react_component: reactComponent,
             detected_colors: mode === "logo" ? detectedColors : [],
