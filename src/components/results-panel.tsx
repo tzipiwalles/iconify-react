@@ -147,7 +147,7 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
   }
 
   const handleDownloadSvg = () => {
-    if (!result) return
+    if (!result || !result.optimizedSvg) return
     const blob = new Blob([result.optimizedSvg], { type: "image/svg+xml" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
