@@ -27,7 +27,7 @@ interface Asset {
   id: string
   original_filename: string
   original_url: string
-  mode: "icon" | "logo"
+  mode: "icon" | "logo" | "image"
   component_name: string
   svg_url: string
   react_component: string
@@ -372,6 +372,8 @@ export default function MyAssetsPage() {
                   <span className={`absolute left-3 top-3 rounded-lg px-2 py-1 text-xs font-medium ${
                     asset.mode === "icon" 
                       ? "bg-primary/20 text-primary" 
+                      : asset.mode === "image"
+                      ? "bg-emerald-500/20 text-emerald-400"
                       : "bg-purple-500/20 text-purple-400"
                   }`}>
                     {asset.mode}
@@ -461,7 +463,8 @@ export default function MyAssetsPage() {
                               <Pencil className="h-4 w-4" />
                               Rename
                             </button>
-                            {asset.detected_colors && asset.detected_colors.length > 0 && (
+                            {/* Edit Colors - only for icon/logo modes with detected colors */}
+                            {asset.mode !== "image" && asset.detected_colors && asset.detected_colors.length > 0 && (
                               <button
                                 onClick={() => handleStartEditColors(asset)}
                                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted"
