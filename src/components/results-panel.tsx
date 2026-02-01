@@ -78,7 +78,11 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
   // Generate the hosted URL for AI tools
   const getHostedUrl = () => {
     if (!result) return ""
-    // Use the permanent API URL format
+    // For image mode, use the direct storage URL
+    if (result.mode === "image") {
+      return result.publicUrl || ""
+    }
+    // For SVG modes, use the permanent API URL format
     return `https://www.assetbridge.app/api/assets/${result.componentName}/svg`
   }
 
@@ -91,7 +95,9 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
   }
 
   const handleCopyAiPrompt = async () => {
-    const prompt = `Use this logo in the design (do not use inline SVG, use this hosted link): ${hostedUrl}`
+    const prompt = result?.mode === "image"
+      ? `Use this image in the design: ${hostedUrl}`
+      : `Use this logo in the design (do not use inline SVG, use this hosted link): ${hostedUrl}`
     await navigator.clipboard.writeText(prompt)
     setCopiedPrompt(true)
     setTimeout(() => setCopiedPrompt(false), 2000)
