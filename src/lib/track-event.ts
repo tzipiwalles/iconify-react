@@ -27,7 +27,7 @@ export type EventType =
   | "page_view"           // Page view
 
 export interface EventMetadata {
-  mode?: "icon" | "logo"
+  mode?: "icon" | "logo" | "image"
   fileType?: string
   fileSize?: number
   componentName?: string
