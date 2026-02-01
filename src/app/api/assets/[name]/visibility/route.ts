@@ -36,23 +36,26 @@ export async function PATCH(
       )
     }
 
-    // Find the asset by component name
+    // Find the asset by component name (get the most recent one if there are duplicates)
     console.log("[Visibility API] Looking for asset:", params.name)
-    const { data: asset, error: fetchError } = await supabase
+    const { data: assets, error: fetchError } = await supabase
       .from("assets")
       .select("id, user_id")
       .eq("component_name", params.name)
-      .single()
+      .order("created_at", { ascending: false })
+      .limit(1)
 
-    console.log("[Visibility API] Asset query result:", { asset, fetchError })
+    console.log("[Visibility API] Asset query result:", { assets, fetchError })
 
-    if (fetchError || !asset) {
+    if (fetchError || !assets || assets.length === 0) {
       console.log("[Visibility API] Asset not found:", params.name)
       return NextResponse.json(
         { success: false, error: "Asset not found", name: params.name },
         { status: 404 }
       )
     }
+
+    const asset = assets[0]
 
     // Check ownership: either the user owns it or it's an anonymous asset
     const isOwner = asset.user_id === user?.id

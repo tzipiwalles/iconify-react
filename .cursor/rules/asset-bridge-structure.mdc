@@ -1,0 +1,33 @@
+---
+description: Asset Bridge project structure and patterns
+alwaysApply: true
+---
+
+# Asset Bridge Project
+
+## Tech Stack
+- Next.js 14 with App Router
+- Supabase (Auth, Database, Storage)
+- TypeScript
+- Tailwind CSS
+
+## Key Directories
+- `src/app/api/` - API routes
+- `src/components/` - React components
+- `src/contexts/` - React contexts (auth-context)
+- `src/lib/supabase/` - Supabase client utilities
+
+## Database Tables
+- `assets` - Main table for logos/icons
+  - `component_name` - Unique name for the asset
+  - `user_id` - Owner (null for anonymous)
+  - `visibility` - "public" or "private"
+  - `svg_url`, `original_url`, `react_component`
+
+## Important Patterns
+- Use service role key for admin operations (bypasses RLS)
+- Assets created without login have `user_id = null`
+- Local dev uses different DB than production
+
+## Admin Users
+- Check `src/lib/admin.ts` for admin email list
