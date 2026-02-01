@@ -194,7 +194,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg mb-8">
-            Stop seeing broken image icons. Host your custom logos & local assets instantly — get permanent links for Cursor, ChatGPT Canvas, Base44 & more.
+            Stop seeing broken image icons. Host your logos, icons & images instantly — get permanent links for Cursor, ChatGPT Canvas, Base44 & more.
           </p>
           
           {/* CTA Button */}
@@ -207,7 +207,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-500 via-fuchsia-500 to-primary bg-[length:200%_100%] animate-[gradient_3s_ease-in-out_infinite]" />
               <span className="relative flex items-center gap-3">
                 <Zap className="h-6 w-6" />
-                Generate Logo
+                Host Your Asset
               </span>
             </Button>
           </Link>
@@ -219,7 +219,7 @@ export default function Home() {
             <div>
               <h2 className="text-2xl font-bold">Public Gallery</h2>
               <p className="text-sm text-muted-foreground">
-                Browse icons and logos created by the community
+                Browse icons, logos & images shared by the community
               </p>
             </div>
             <Link href="/create">
@@ -246,7 +246,7 @@ export default function Home() {
               </div>
               <h3 className="mb-2 text-xl font-semibold">No public assets yet</h3>
               <p className="mb-6 text-muted-foreground">
-                Be the first to share your icon or logo!
+                Be the first to share your icon, logo or image!
               </p>
               <Link href="/create">
                 <Button className="gap-2 rounded-xl">
