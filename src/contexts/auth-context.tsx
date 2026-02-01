@@ -11,6 +11,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>
   signInWithGithub: () => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<void>
+  devLogin: () => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -81,6 +82,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error
   }
 
+  const devLogin = async () => {
+    // Only works in development
+    if (process.env.NODE_ENV !== "development") {
+      throw new Error("Dev login only available in development")
+    }
+
+    // Call the dev-auth API to set the dev user's password and get credentials
+    const response = await fetch("/api/dev-auth", { method: "POST" })
+    const data = await response.json()
+
+    if (!data.success) {
+      throw new Error(data.error || "Dev login failed")
+    }
+
+    console.log("[Dev Login] Got credentials for:", data.email)
+
+    // Sign in with the returned credentials
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    })
+
+    if (error) {
+      console.error("[Dev Login] signIn error:", error)
+      throw error
+    }
+  }
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
@@ -95,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         signInWithGithub,
         signInWithEmail,
+        devLogin,
         signOut,
       }}
     >
