@@ -36,12 +36,22 @@ export async function PATCH(
       )
     }
 
-    // Find the asset by component name (get the most recent one if there are duplicates)
-    console.log("[Visibility API] Looking for asset:", params.name)
-    const { data: assets, error: fetchError } = await supabase
+    // Find the asset by component name AND user_id (unique per user)
+    console.log("[Visibility API] Looking for asset:", params.name, "for user:", user?.id || "anonymous")
+    
+    let query = supabase
       .from("assets")
       .select("id, user_id")
       .eq("component_name", params.name)
+    
+    // If user is logged in, find their asset. Otherwise, find anonymous assets.
+    if (user) {
+      query = query.eq("user_id", user.id)
+    } else {
+      query = query.is("user_id", null)
+    }
+    
+    const { data: assets, error: fetchError } = await query
       .order("created_at", { ascending: false })
       .limit(1)
 
@@ -56,18 +66,6 @@ export async function PATCH(
     }
 
     const asset = assets[0]
-
-    // Check ownership: either the user owns it or it's an anonymous asset
-    const isOwner = asset.user_id === user?.id
-    const isAnonymousAsset = asset.user_id === null
-
-    // Only allow update if user owns it OR if it's anonymous (anyone can make anonymous assets public)
-    if (!isOwner && !isAnonymousAsset) {
-      return NextResponse.json(
-        { success: false, error: "Not authorized to update this asset" },
-        { status: 403 }
-      )
-    }
 
     // Update visibility
     const { error: updateError } = await supabase

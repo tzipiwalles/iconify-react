@@ -1621,6 +1621,29 @@ export async function POST(request: NextRequest) {
           process.env.SUPABASE_SERVICE_ROLE_KEY
         )
         
+        // Check if an asset with this name already exists for this user
+        const userId = user?.id || null
+        let query = supabaseAdmin
+          .from("assets")
+          .select("id, component_name")
+          .eq("component_name", componentName)
+        
+        if (userId) {
+          query = query.eq("user_id", userId)
+        } else {
+          query = query.is("user_id", null)
+        }
+        
+        const { data: existingAsset } = await query.single()
+        
+        // If asset already exists, update it instead of creating a new one
+        let finalComponentName = componentName
+        if (existingAsset) {
+          // Append timestamp to make name unique
+          finalComponentName = `${componentName}_${timestamp}`
+          console.log(`[API] Asset "${componentName}" already exists, using "${finalComponentName}"`)
+        }
+        
         // Upload original file
         await supabaseAdmin.storage
           .from("assets")
@@ -1637,12 +1660,12 @@ export async function POST(request: NextRequest) {
         const { data: assetData, error: insertError } = await supabaseAdmin
           .from("assets")
           .insert({
-            user_id: user?.id || null,
+            user_id: userId,
             original_filename: fileName,
             original_url: originalUrl,
             original_size_bytes: file.size,
             mode: mode,
-            component_name: componentName,
+            component_name: finalComponentName,
             remove_background: shouldRemoveBackground,
             svg_url: publicUrl,
             react_component: reactComponent,
