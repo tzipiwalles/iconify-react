@@ -4,10 +4,10 @@ import * as React from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Eraser, Info, FileCode, Sparkles, Palette } from "lucide-react"
+import { Eraser, Info, FileCode, Sparkles, Palette, Image } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export type OutputMode = "icon" | "logo"
+export type OutputMode = "icon" | "logo" | "image"
 
 interface SettingsPanelProps {
   mode: OutputMode
@@ -38,14 +38,14 @@ export function SettingsPanel({
       </h3>
 
       <div className="space-y-5">
-        {/* Mode Selector - Icon vs Logo */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Mode Selector - Icon vs Logo vs Image */}
+        <div className="grid grid-cols-3 gap-2">
           {/* Icon Mode */}
           <button
             onClick={() => onModeChange("icon")}
             disabled={isProcessing}
             className={cn(
-              "relative flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all",
+              "relative flex flex-col items-center gap-2 rounded-xl border-2 p-3 transition-all",
               mode === "icon"
                 ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
                 : "border-border bg-muted/30 hover:border-muted-foreground/30 hover:bg-muted/50",
@@ -58,23 +58,23 @@ export function SettingsPanel({
               </div>
             )}
             <div className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-xl",
+              "flex h-10 w-10 items-center justify-center rounded-xl",
               mode === "icon" ? "bg-primary/10" : "bg-muted"
             )}>
               <Palette className={cn(
-                "h-6 w-6",
+                "h-5 w-5",
                 mode === "icon" ? "text-primary" : "text-muted-foreground"
               )} />
             </div>
             <div className="text-center">
               <p className={cn(
-                "font-semibold",
+                "text-sm font-semibold",
                 mode === "icon" ? "text-primary" : "text-foreground"
               )}>
-                Standard Icon
+                Icon
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Single color · Themeable
+              <p className="text-[10px] text-muted-foreground">
+                SVG · Themeable
               </p>
             </div>
           </button>
@@ -84,7 +84,7 @@ export function SettingsPanel({
             onClick={() => onModeChange("logo")}
             disabled={isProcessing}
             className={cn(
-              "relative flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all",
+              "relative flex flex-col items-center gap-2 rounded-xl border-2 p-3 transition-all",
               mode === "logo"
                 ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
                 : "border-border bg-muted/30 hover:border-muted-foreground/30 hover:bg-muted/50",
@@ -97,11 +97,11 @@ export function SettingsPanel({
               </div>
             )}
             <div className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-xl",
+              "flex h-10 w-10 items-center justify-center rounded-xl",
               mode === "logo" ? "bg-primary/10" : "bg-muted"
             )}>
               <div 
-                className="h-6 w-6 rounded-md"
+                className="h-5 w-5 rounded-md"
                 style={{
                   background: mode === "logo" 
                     ? "linear-gradient(135deg, #3B82F6, #8B5CF6, #EC4899)" 
@@ -111,13 +111,52 @@ export function SettingsPanel({
             </div>
             <div className="text-center">
               <p className={cn(
-                "font-semibold",
+                "text-sm font-semibold",
                 mode === "logo" ? "text-primary" : "text-foreground"
               )}>
-                Brand Logo
+                Logo
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Original colors · Auto-optimized
+              <p className="text-[10px] text-muted-foreground">
+                SVG · Colors
+              </p>
+            </div>
+          </button>
+
+          {/* Image Mode (Portfolio) */}
+          <button
+            onClick={() => onModeChange("image")}
+            disabled={isProcessing}
+            className={cn(
+              "relative flex flex-col items-center gap-2 rounded-xl border-2 p-3 transition-all",
+              mode === "image"
+                ? "border-emerald-500 bg-emerald-500/5 shadow-lg shadow-emerald-500/10"
+                : "border-border bg-muted/30 hover:border-muted-foreground/30 hover:bg-muted/50",
+              isProcessing && "cursor-not-allowed opacity-50"
+            )}
+          >
+            {mode === "image" && (
+              <div className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+                ✓
+              </div>
+            )}
+            <div className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-xl",
+              mode === "image" ? "bg-emerald-500/10" : "bg-muted"
+            )}>
+              <Image className={cn(
+                "h-5 w-5",
+                mode === "image" ? "text-emerald-500" : "text-muted-foreground"
+              )} />
+            </div>
+            <div className="text-center">
+              <p className={cn(
+                "text-sm font-semibold",
+                mode === "image" ? "text-emerald-500" : "text-foreground"
+              )}>
+                Image
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Raw · Up to 5MB
               </p>
             </div>
           </button>
@@ -126,7 +165,9 @@ export function SettingsPanel({
         {/* Mode Description */}
         <div className={cn(
           "rounded-xl p-4 text-sm",
-          mode === "icon" ? "bg-blue-500/10 text-blue-200" : "bg-purple-500/10 text-purple-200"
+          mode === "icon" ? "bg-blue-500/10 text-blue-200" : 
+          mode === "logo" ? "bg-purple-500/10 text-purple-200" :
+          "bg-emerald-500/10 text-emerald-200"
         )}>
           {mode === "icon" ? (
             <div className="space-y-2">
@@ -137,7 +178,7 @@ export function SettingsPanel({
                 <li>Works like Lucide, Heroicons, etc.</li>
               </ul>
             </div>
-          ) : (
+          ) : mode === "logo" ? (
             <div className="space-y-2">
               <p className="font-medium">🎨 Perfect for logos & branding</p>
               <ul className="ml-4 list-disc space-y-1 text-xs opacity-80">
@@ -146,37 +187,48 @@ export function SettingsPanel({
                 <li>Maintains aspect ratio</li>
               </ul>
             </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="font-medium">🖼️ Perfect for portfolios & galleries</p>
+              <ul className="ml-4 list-disc space-y-1 text-xs opacity-80">
+                <li>Keeps original image quality (PNG/JPG/WebP)</li>
+                <li>No vectorization - just upload & host</li>
+                <li>Supports larger files up to 5MB</li>
+              </ul>
+            </div>
           )}
         </div>
 
-        {/* Remove Background Toggle */}
-        <div className="flex items-center justify-between rounded-xl bg-muted/50 p-4">
-          <div className="flex items-center gap-3">
-            <Eraser className="h-4 w-4 text-muted-foreground" />
-            <Label
-              htmlFor="remove-bg"
-              className="cursor-pointer text-sm font-medium"
-            >
-              Remove Background
-            </Label>
-            <div className="group relative">
-              <Info className="h-4 w-4 cursor-help text-muted-foreground/60 transition-colors hover:text-muted-foreground" />
-              <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl bg-popover p-3 text-xs leading-relaxed text-popover-foreground opacity-0 shadow-xl ring-1 ring-border transition-opacity group-hover:opacity-100">
-                <p>
-                  Uses remove.bg AI to remove the background from your image before
-                  vectorization.
-                </p>
-                <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-popover" />
+        {/* Remove Background Toggle - Only for icon/logo modes */}
+        {mode !== "image" && (
+          <div className="flex items-center justify-between rounded-xl bg-muted/50 p-4">
+            <div className="flex items-center gap-3">
+              <Eraser className="h-4 w-4 text-muted-foreground" />
+              <Label
+                htmlFor="remove-bg"
+                className="cursor-pointer text-sm font-medium"
+              >
+                Remove Background
+              </Label>
+              <div className="group relative">
+                <Info className="h-4 w-4 cursor-help text-muted-foreground/60 transition-colors hover:text-muted-foreground" />
+                <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl bg-popover p-3 text-xs leading-relaxed text-popover-foreground opacity-0 shadow-xl ring-1 ring-border transition-opacity group-hover:opacity-100">
+                  <p>
+                    Uses remove.bg AI to remove the background from your image before
+                    vectorization.
+                  </p>
+                  <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-popover" />
+                </div>
               </div>
             </div>
+            <Switch
+              id="remove-bg"
+              checked={removeBackground}
+              onCheckedChange={onRemoveBackgroundChange}
+              disabled={isProcessing}
+            />
           </div>
-          <Switch
-            id="remove-bg"
-            checked={removeBackground}
-            onCheckedChange={onRemoveBackgroundChange}
-            disabled={isProcessing}
-          />
-        </div>
+        )}
 
         {/* Component Name Input */}
         <div className="rounded-xl bg-muted/50 p-4">
@@ -223,9 +275,13 @@ export function SettingsPanel({
                 <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px]">currentColor</code>
                 {" "}fill
               </>
-            ) : (
+            ) : mode === "logo" ? (
               <>
                 Optimized SVG with original proportions and up to 6 auto-detected colors
+              </>
+            ) : (
+              <>
+                Original image hosted with a permanent public URL
               </>
             )}
           </p>

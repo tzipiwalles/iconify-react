@@ -28,7 +28,7 @@ type BackgroundType = "black" | "white" | "gradient"
 
 interface ProcessedResult {
   componentName: string
-  optimizedSvg: string
+  optimizedSvg: string | null
   reactComponent: string
   publicUrl: string | null
   originalFileName: string
@@ -320,31 +320,36 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
                 <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="hidden xs:inline">Preview</span>
               </TabsTrigger>
-              <TabsTrigger
-                value="component"
-                className="gap-1.5 sm:gap-2 data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <Code2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">React</span>
-                <span className="sm:hidden">TSX</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="svg"
-                className="gap-1.5 sm:gap-2 data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <svg
-                  className="h-3.5 w-3.5 sm:h-4 sm:w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-                SVG
-              </TabsTrigger>
+              {/* Only show React/SVG tabs for non-image modes */}
+              {result.mode !== "image" && (
+                <>
+                  <TabsTrigger
+                    value="component"
+                    className="gap-1.5 sm:gap-2 data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3"
+                  >
+                    <Code2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">React</span>
+                    <span className="sm:hidden">TSX</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="svg"
+                    className="gap-1.5 sm:gap-2 data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3"
+                  >
+                    <svg
+                      className="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                      <path d="M2 17l10 5 10-5" />
+                      <path d="M2 12l10 5 10-5" />
+                    </svg>
+                    SVG
+                  </TabsTrigger>
+                </>
+              )}
             </TabsList>
 
             <div className="flex items-center gap-2">
@@ -395,13 +400,23 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
                 backgroundClasses[background]
               )}
             >
-              <div
-                className={cn(
-                  "flex h-28 w-28 items-center justify-center transition-colors [&>svg]:h-full [&>svg]:w-full",
-                  background === "white" ? "text-black" : "text-white"
-                )}
-                dangerouslySetInnerHTML={{ __html: result.optimizedSvg }}
-              />
+              {result.mode === "image" ? (
+                /* Image preview for raw images */
+                <img
+                  src={result.publicUrl || ""}
+                  alt={result.componentName}
+                  className="max-h-48 max-w-full rounded-lg object-contain"
+                />
+              ) : (
+                /* SVG preview for icons/logos */
+                <div
+                  className={cn(
+                    "flex h-28 w-28 items-center justify-center transition-colors [&>svg]:h-full [&>svg]:w-full",
+                    background === "white" ? "text-black" : "text-white"
+                  )}
+                  dangerouslySetInnerHTML={{ __html: result.optimizedSvg || "" }}
+                />
+              )}
             </div>
 
             {/* Info and action bar */}
@@ -414,64 +429,104 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
               </div>
               
               {/* Action buttons grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* SVG Actions */}
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">SVG</p>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => handleCopy(result.optimizedSvg, "svg")}
-                    >
-                      {copiedSvg ? (
-                        <>
-                          <Check className="mr-2 h-4 w-4 text-emerald-500" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="mr-2 h-4 w-4" />
-                          Copy
-                        </>
-                      )}
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1" onClick={handleDownloadSvg}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
+              <div className={cn("grid gap-3", result.mode === "image" ? "grid-cols-1" : "grid-cols-2")}>
+                {/* SVG Actions - Only for icon/logo modes */}
+                {result.mode !== "image" && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">SVG</p>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleCopy(result.optimizedSvg || "", "svg")}
+                      >
+                        {copiedSvg ? (
+                          <>
+                            <Check className="mr-2 h-4 w-4 text-emerald-500" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-1" onClick={handleDownloadSvg}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
                 
-                {/* React Component Actions */}
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">React (.tsx)</p>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => handleCopy(result.reactComponent, "component")}
-                    >
-                      {copiedComponent ? (
-                        <>
-                          <Check className="mr-2 h-4 w-4 text-emerald-500" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="mr-2 h-4 w-4" />
-                          Copy
-                        </>
-                      )}
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1" onClick={handleDownloadComponent}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
+                {/* Image Actions - Only for image mode */}
+                {result.mode === "image" && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Image</p>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleCopy(result.publicUrl || "", "url")}
+                      >
+                        {copiedUrl ? (
+                          <>
+                            <Check className="mr-2 h-4 w-4 text-emerald-500" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <LinkIcon className="mr-2 h-4 w-4" />
+                            Copy URL
+                          </>
+                        )}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => window.open(result.publicUrl || "", "_blank")}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Open
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
+                
+                {/* React Component Actions - Only for icon/logo modes */}
+                {result.mode !== "image" && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">React (.tsx)</p>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleCopy(result.reactComponent, "component")}
+                      >
+                        {copiedComponent ? (
+                          <>
+                            <Check className="mr-2 h-4 w-4 text-emerald-500" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-1" onClick={handleDownloadComponent}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

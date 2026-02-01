@@ -14,7 +14,7 @@ import { trackEvent } from "@/lib/track-event"
 
 interface ProcessedResult {
   componentName: string
-  optimizedSvg: string
+  optimizedSvg: string | null
   reactComponent: string
   publicUrl: string | null
   originalFileName: string
@@ -36,18 +36,22 @@ export default function CreatePage() {
   
   const { user } = useAuth()
 
-  const MAX_FILE_SIZE = 4 * 1024 * 1024
-  const getMinFileSize = () => mode === "icon" ? 500 : 5000
-  const getRecommendedFileSize = () => mode === "icon" ? 2000 : 30000
+  // File size limits based on mode
+  const getMaxFileSize = () => mode === "image" ? 5 * 1024 * 1024 : 4 * 1024 * 1024
+  const getMinFileSize = () => mode === "icon" ? 500 : mode === "logo" ? 5000 : 1000
+  const getRecommendedFileSize = () => mode === "icon" ? 2000 : mode === "logo" ? 30000 : 10000
 
   useEffect(() => {
     if (selectedFile) {
-      if (selectedFile.size > MAX_FILE_SIZE) {
-        setError(`File is too large (${Math.round(selectedFile.size / 1024 / 1024)}MB). Maximum size is 4MB.`)
+      const maxSize = getMaxFileSize()
+      if (selectedFile.size > maxSize) {
+        const maxMB = Math.round(maxSize / 1024 / 1024)
+        setError(`File is too large (${Math.round(selectedFile.size / 1024 / 1024)}MB). Maximum size is ${maxMB}MB.`)
         setWarning(null)
         return
       }
       
+      setError(null)
       const minSize = getMinFileSize()
       const recommendedSize = getRecommendedFileSize()
       
@@ -66,8 +70,10 @@ export default function CreatePage() {
     setResult(null)
     setError(null)
     
-    if (file.size > MAX_FILE_SIZE) {
-      setError(`File is too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum size is 4MB.`)
+    const maxSize = getMaxFileSize()
+    if (file.size > maxSize) {
+      const maxMB = Math.round(maxSize / 1024 / 1024)
+      setError(`File is too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum size is ${maxMB}MB.`)
       setWarning(null)
       return
     }
@@ -87,7 +93,7 @@ export default function CreatePage() {
       .replace(/\.[^/.]+$/, "")
       .replace(/[^a-zA-Z0-9]/g, "")
       .replace(/^\d+/, "")
-    setComponentName(baseName || "CustomIcon")
+    setComponentName(baseName || (mode === "image" ? "MyImage" : "CustomIcon"))
   }
 
   const handleClear = () => {
@@ -230,7 +236,7 @@ export default function CreatePage() {
                 ) : (
                   <>
                     <Zap className="h-5 w-5" />
-                    Generate Logo
+                    {mode === "image" ? "Upload Image" : "Generate Logo"}
                   </>
                 )}
               </span>
@@ -240,7 +246,7 @@ export default function CreatePage() {
             {result?.assetId && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
                 <p className="text-sm font-medium text-emerald-400">
-                  ✓ Logo created successfully!
+                  ✓ {mode === "image" ? "Image uploaded" : "Logo created"} successfully!
                 </p>
                 {user ? (
                   <Link href="/my-assets" className="mt-2 inline-block text-xs text-emerald-400/70 hover:underline">

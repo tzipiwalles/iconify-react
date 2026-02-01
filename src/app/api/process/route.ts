@@ -119,12 +119,12 @@ interface PotraceParams {
 }
 
 // Output mode types
-type OutputMode = "icon" | "logo"
+type OutputMode = "icon" | "logo" | "image"
 
 /**
  * Configuration for each output mode
  */
-const MODE_CONFIG = {
+const MODE_CONFIG: Record<OutputMode, { colorCount: number; useCurrentColor: boolean; viewBox: string; description: string }> = {
   icon: {
     colorCount: 1,
     useCurrentColor: true,
@@ -136,6 +136,12 @@ const MODE_CONFIG = {
     useCurrentColor: false,
     viewBox: "preserve", // Will preserve original aspect ratio
     description: "Brand Logo - original colors, auto-optimized"
+  },
+  image: {
+    colorCount: 0, // No vectorization
+    useCurrentColor: false,
+    viewBox: "none",
+    description: "Raw Image - no conversion, just upload"
   }
 }
 
@@ -1331,12 +1337,126 @@ export async function POST(request: NextRequest) {
     let buffer = Buffer.from(arrayBuffer)
     console.log(`[API] File buffer size: ${buffer.length} bytes`)
 
+    // Handle IMAGE mode - just upload the file without any processing
+    if (mode === "image") {
+      console.log("[API] 🖼️ Image mode - uploading raw file without vectorization")
+      
+      const timestamp = Date.now()
+      let publicUrl: string | null = null
+      let savedAssetId: string | null = null
+      
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+          const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
+          const supabaseAdmin = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+          )
+          
+          // Determine file extension
+          const ext = fileName.split('.').pop()?.toLowerCase() || 'png'
+          const storagePath = `images/${user?.id || 'anonymous'}/${componentName}_${timestamp}.${ext}`
+          
+          // Upload the raw image
+          const { error: uploadError } = await supabaseAdmin.storage
+            .from("assets")
+            .upload(storagePath, buffer, {
+              contentType: fileType,
+              upsert: true,
+            })
+          
+          if (uploadError) {
+            console.error("[API] Image upload error:", uploadError)
+            throw new Error("Failed to upload image")
+          }
+          
+          // Get public URL
+          const { data: { publicUrl: url } } = supabaseAdmin.storage
+            .from("assets")
+            .getPublicUrl(storagePath)
+          
+          publicUrl = url
+          console.log(`[API] 📤 Image uploaded to: ${publicUrl}`)
+          
+          // Check for existing asset with same name for this user
+          const userId = user?.id || null
+          let query = supabaseAdmin
+            .from("assets")
+            .select("id, component_name")
+            .eq("component_name", componentName)
+          
+          if (userId) {
+            query = query.eq("user_id", userId)
+          } else {
+            query = query.is("user_id", null)
+          }
+          
+          const { data: existingAsset } = await query.single()
+          
+          let finalComponentName = componentName
+          if (existingAsset) {
+            finalComponentName = `${componentName}_${timestamp}`
+            console.log(`[API] Asset "${componentName}" already exists, using "${finalComponentName}"`)
+          }
+          
+          // Save to database
+          const { data: assetData, error: insertError } = await supabaseAdmin
+            .from("assets")
+            .insert({
+              user_id: userId,
+              original_filename: fileName,
+              original_url: publicUrl,
+              original_size_bytes: file.size,
+              mode: "image",
+              component_name: finalComponentName,
+              remove_background: false,
+              svg_url: publicUrl, // For images, svg_url points to the image itself
+              react_component: `// Raw image: ${finalComponentName}\nexport const ${finalComponentName} = () => <img src="${publicUrl}" alt="${finalComponentName}" />`,
+              detected_colors: [],
+              visibility: "private",
+            })
+            .select()
+            .single()
+          
+          if (insertError) {
+            console.error("[API] Failed to save image asset to DB:", insertError)
+          } else {
+            savedAssetId = assetData.id
+            console.log(`[API] 💾 Image asset saved to DB: ${savedAssetId}`)
+          }
+        } catch (error) {
+          console.error("[API] Image mode error:", error)
+          return NextResponse.json(
+            { error: "Failed to upload image" },
+            { status: 500 }
+          )
+        }
+      }
+      
+      const totalTime = Date.now() - startTime
+      console.log(`[API] ✅ Image upload complete in ${totalTime}ms`)
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          componentName,
+          optimizedSvg: null,
+          reactComponent: `// Raw image: ${componentName}\nexport const ${componentName} = () => <img src="${publicUrl}" alt="${componentName}" />`,
+          publicUrl,
+          originalFileName: fileName,
+          detectedColors: [],
+          mode: "image",
+          assetId: savedAssetId,
+        },
+      })
+    }
+
     let svgString: string
     let detectedColors: string[] = []
     let originalWidth: number | undefined
     let originalHeight: number | undefined
 
-    // Step 1: Handle different file types
+    // Step 1: Handle different file types (for icon/logo modes)
     if (fileType === "image/svg+xml" || fileName.toLowerCase().endsWith(".svg")) {
       console.log("[API] Processing as SVG...")
       svgString = buffer.toString("utf-8")
