@@ -476,7 +476,7 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
                         variant="outline" 
                         size="sm" 
                         className="flex-1"
-                        onClick={() => handleCopy(result.publicUrl || "", "url")}
+                        onClick={handleCopyUrl}
                       >
                         {copiedUrl ? (
                           <>
