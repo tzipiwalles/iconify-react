@@ -1271,6 +1271,7 @@ export async function POST(request: NextRequest) {
   // Check if user is admin (exempt from rate limiting)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  console.log(`[API] 👤 User detected: ${user?.id || 'anonymous'} (${user?.email || 'no email'})`)
   const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email)
   
   // Check rate limit (skip for admin users)
@@ -1422,7 +1423,7 @@ export async function POST(request: NextRequest) {
             console.error("[API] Failed to save image asset to DB:", insertError)
           } else {
             savedAssetId = assetData.id
-            console.log(`[API] 💾 Image asset saved to DB: ${savedAssetId}`)
+            console.log(`[API] 💾 Image asset saved to DB: ${savedAssetId}, user_id: ${userId || 'null'}, name: ${finalComponentName}`)
           }
         } catch (error) {
           console.error("[API] Image mode error:", error)

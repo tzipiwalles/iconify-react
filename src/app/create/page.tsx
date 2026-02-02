@@ -120,6 +120,7 @@ export default function CreatePage() {
       const response = await fetch("/api/process", {
         method: "POST",
         body: formData,
+        credentials: "include", // Ensure auth cookies are sent
       })
 
       const data = await response.json()
