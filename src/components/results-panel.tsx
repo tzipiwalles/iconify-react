@@ -597,7 +597,7 @@ export function ResultsPanel({ result, onLoginClick }: ResultsPanelProps) {
                   variant="default"
                   size="sm"
                   className="rounded-lg bg-emerald-600 hover:bg-emerald-700"
-                  onClick={() => handleCopy(result.optimizedSvg, "svg")}
+                  onClick={() => handleCopy(result.optimizedSvg || "", "svg")}
                 >
                   {copiedSvg ? (
                     <>
