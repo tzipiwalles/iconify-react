@@ -34,6 +34,15 @@ export const metadata: Metadata = {
   authors: [{ name: "Asset-Bridge" }],
   creator: "Asset-Bridge",
   publisher: "Asset-Bridge",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon", type: "image/png", sizes: "192x192" },
+    ],
+    apple: [
+      { url: "/apple-icon", sizes: "180x180", type: "image/png" },
+    ],
+  },
   robots: {
     index: true,
     follow: true,

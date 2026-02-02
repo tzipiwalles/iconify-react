@@ -2,20 +2,20 @@ import { ImageResponse } from 'next/og'
  
 export const runtime = 'edge'
 
-// 192x192 is the recommended size for Google/Bing search results
+// Apple touch icon should be 180x180
 export const size = {
-  width: 192,
-  height: 192,
+  width: 180,
+  height: 180,
 }
  
 export const contentType = 'image/png'
  
-export default function Icon() {
+export default function AppleIcon() {
   return new ImageResponse(
     (
       <div
         style={{
-          fontSize: 96,
+          fontSize: 90,
           background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%)',
           width: '100%',
           height: '100%',
@@ -25,7 +25,6 @@ export default function Icon() {
           color: 'white',
           fontWeight: 'bold',
           fontFamily: 'system-ui, sans-serif',
-          borderRadius: '24px',
         }}
       >
         AB
