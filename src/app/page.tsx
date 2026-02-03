@@ -214,6 +214,88 @@ export default function Home() {
           </div>
         )}
 
+        {/* How It Works Section */}
+        <div className="mb-16">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold sm:text-3xl mb-2">
+              From AI Image to Code —{" "}
+              <span className="bg-gradient-to-r from-primary via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+                In Seconds
+              </span>
+            </h2>
+            <p className="text-muted-foreground">
+              The fastest path from idea to implementation
+            </p>
+          </div>
+
+          <div className="relative">
+            {/* Connection lines (hidden on mobile) */}
+            <div className="hidden md:block absolute top-1/2 left-[16.67%] right-[16.67%] h-0.5 bg-gradient-to-r from-purple-500/30 via-primary/50 to-emerald-500/30 -translate-y-1/2 z-0" />
+            
+            <div className="grid gap-6 md:grid-cols-3 relative z-10">
+              {/* Step 1: Generate */}
+              <div className="flex flex-col items-center text-center">
+                <div className="relative mb-4">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-purple-500/10 border border-purple-500/20">
+                    <span className="text-4xl">🎨</span>
+                  </div>
+                  <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-purple-500 text-xs font-bold text-white">
+                    1
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Create with AI</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-[240px]">
+                  Generate your logo in Ideogram, Midjourney, or DALL-E. Download the PNG.
+                </p>
+              </div>
+
+              {/* Step 2: Bridge (The Magic) */}
+              <div className="flex flex-col items-center text-center">
+                <div className="relative mb-4">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/20 border border-primary/30 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
+                    <Zap className="h-10 w-10 text-primary" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                    2
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Upload & Optimize</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-[240px]">
+                  Upload to Asset-Bridge. We automatically{" "}
+                  <span className="font-semibold text-primary">vectorize to SVG</span>, remove backgrounds, and compress for code.
+                </p>
+              </div>
+
+              {/* Step 3: Implement */}
+              <div className="flex flex-col items-center text-center">
+                <div className="relative mb-4">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                    <span className="text-4xl">💻</span>
+                  </div>
+                  <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
+                    3
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Paste & Build</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-[240px]">
+                  Get a permanent link. Paste it into Cursor, Bolt, or v0. It renders perfectly every time.
+                </p>
+              </div>
+            </div>
+
+            {/* Mobile arrows */}
+            <div className="md:hidden flex flex-col items-center gap-2 mt-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <span className="text-xs">PNG</span>
+                <ArrowRight className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-primary">SVG</span>
+                <ArrowRight className="h-4 w-4 text-emerald-500" />
+                <span className="text-xs">Code</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Why Not Google Drive? Comparison Section */}
         <div className="mb-16">
           <div className="text-center mb-8">
