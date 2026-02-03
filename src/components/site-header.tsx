@@ -82,6 +82,12 @@ export function SiteHeader({
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3">
+          <Link href="/gallery">
+            <Button variant="ghost" size="sm" className="rounded-xl text-xs sm:text-sm px-2.5 sm:px-3">
+              Gallery
+            </Button>
+          </Link>
+          
           <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 sm:h-10 sm:w-10" asChild>
             <a
               href="https://github.com/tzipiwalles/iconify-react"
