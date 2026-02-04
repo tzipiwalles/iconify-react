@@ -105,7 +105,8 @@ export async function POST(request: NextRequest) {
       }
       
       // Create a File object from the fetched buffer
-      const blob = new Blob([fetchedImage.buffer], { type: fetchedImage.contentType })
+      const uint8Array = new Uint8Array(fetchedImage.buffer)
+      const blob = new Blob([uint8Array], { type: fetchedImage.contentType })
       file = new File([blob], fetchedImage.filename, { type: fetchedImage.contentType })
     }
     else {
